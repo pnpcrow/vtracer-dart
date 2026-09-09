@@ -1,0 +1,15 @@
+name: visioncortex
+description: >-
+  Pure Dart port of the visioncortex image-processing primitives used by
+  vtracer: color/binary images, connected-component clustering, hierarchical
+  color clustering, path tracing, smoothing and spline fitting.
+version: 0.9.3
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dev_dependencies:
+  test: ^1.25.0
+
+resolution: workspace
