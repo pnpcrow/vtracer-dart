@@ -71,6 +71,19 @@ void main() {
     expect(state.shapeCount, greaterThan(0));
     expect(state.error, isNull);
     expect(state.dirty, isFalse);
+
+    // Info-bar facts are collected after the render.
+    expect(state.sourceInfo, isNotNull);
+    expect(state.sourceInfo!.format, 'Sample');
+    expect(state.sourceInfo!.colorSpace, 'sRGB');
+    final out = state.outputInfo;
+    expect(out, isNotNull);
+    expect(out!.width, 480);
+    expect(out.height, 360);
+    expect(out.shapes, greaterThan(0));
+    expect(out.layers, greaterThan(0));
+    expect(out.bytes, greaterThan(0));
+    expect(out.renderMs, greaterThanOrEqualTo(0));
   });
 
   test('parameter change waits for apply', () async {

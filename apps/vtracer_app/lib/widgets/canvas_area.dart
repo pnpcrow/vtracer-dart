@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../controller.dart';
 import '../detail/detail.dart';
@@ -31,6 +33,10 @@ class _CanvasAreaState extends State<CanvasArea> {
   /// the trace changes, never on window resize.
   String? _bakedSvg;
 
+  /// Displayed-width ÷ source-width of the current preview, live-tracked
+  /// from the frame layout for the info bar.
+  final ValueNotifier<double?> _previewScale = ValueNotifier(null);
+
   @override
   void didUpdateWidget(CanvasArea oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -39,6 +45,7 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   @override
   void dispose() {
+    _previewScale.dispose();
     _preview?.dispose();
     _preview = null;
     super.dispose();
@@ -65,6 +72,16 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    return Column(
+      children: [
+        Expanded(child: _canvas(context)),
+        if (state.hasImage) _infoBar(context),
+      ],
+    );
+  }
+
+  Widget _canvas(BuildContext context) {
     final state = widget.state;
     return DropTarget(
       onDragDone: (details) async {
@@ -145,6 +162,9 @@ class _CanvasAreaState extends State<CanvasArea> {
     final baked = _bakedSvg;
     final svg = widget.state.svg;
     return LayoutBuilder(builder: (context, constraints) {
+      if (preview != null && preview.height > 0) {
+        _trackPreviewScale(preview, constraints.maxWidth, constraints.maxHeight);
+      }
       return Container(
         constraints: BoxConstraints(
           maxWidth: constraints.maxWidth,
@@ -171,6 +191,100 @@ class _CanvasAreaState extends State<CanvasArea> {
             : const Center(child: CircularProgressIndicator()),
       );
     });
+  }
+
+  /// Track how large the preview is displayed (contain-fit of the doc-aspect
+  /// raster inside the frame) relative to the source image resolution.
+  /// Updated post-frame: the info bar listens and rebuilds on change.
+  void _trackPreviewScale(ui.Image preview, double frameW, double frameH) {
+    final aspect = preview.width / preview.height;
+    final displayedW = math.min(frameW, frameH * aspect);
+    final srcW = widget.state.imageWidth;
+    final scale = srcW > 0 ? displayedW / srcW : null;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _previewScale.value != scale) {
+        _previewScale.value = scale;
+      }
+    });
+  }
+
+  /// The bottom strip: source/output facts and the preview zoom level.
+  Widget _infoBar(BuildContext context) {
+    final state = widget.state;
+    final src = state.sourceInfo;
+    final out = state.outputInfo;
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall;
+
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _barSegment(
+                    style,
+                    'Input',
+                    [
+                      if (src != null) src.format,
+                      '${state.imageWidth}×${state.imageHeight}',
+                      if (src != null) src.colorSpace,
+                      if (src != null) formatBytes(src.bytes),
+                    ],
+                  ),
+                  const SizedBox(width: 20),
+                  _barSegment(
+                    style,
+                    'Output',
+                    out == null
+                        ? ['SVG', 'pending…']
+                        : [
+                            'SVG',
+                            '${out.width}×${out.height}',
+                            '${out.shapes} shapes',
+                            '${out.layers} layers',
+                            formatBytes(out.bytes),
+                            '${out.renderMs} ms',
+                          ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          ValueListenableBuilder<double?>(
+            valueListenable: _previewScale,
+            builder: (context, scale, _) => Text(
+              scale == null ? '' : 'Preview ${(scale * 100).round()}%',
+              style: style?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _barSegment(TextStyle? style, String label, List<String> parts) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label  ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          TextSpan(text: parts.join(' · ')),
+        ],
+      ),
+      style: style,
+    );
   }
 
   /// Opens the trace full-detail in a separate window/tab.

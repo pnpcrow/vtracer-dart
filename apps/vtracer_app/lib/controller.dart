@@ -13,6 +13,74 @@ enum UiHierarchical { stacked, cutout }
 
 enum UiFitMode { pixel, polygon, spline }
 
+/// What we know about the loaded source image (shown in the info bar).
+class SourceInfo {
+  /// Sniffed container format, e.g. "PNG".
+  final String format;
+
+  /// Color space of the decoded frames, e.g. "sRGB".
+  final String colorSpace;
+
+  /// Encoded byte length (raw pixel count for the built-in sample).
+  final int bytes;
+
+  const SourceInfo(this.format, this.colorSpace, this.bytes);
+}
+
+/// Facts about the last produced SVG (shown in the info bar).
+class OutputInfo {
+  final int width;
+  final int height;
+  final int shapes;
+  final int layers;
+  final int bytes;
+  final int renderMs;
+
+  const OutputInfo({
+    required this.width,
+    required this.height,
+    required this.shapes,
+    required this.layers,
+    required this.bytes,
+    required this.renderMs,
+  });
+}
+
+/// Format a byte count for display: "8.2 KB", "1.4 MB".
+String formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) {
+    return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  }
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
+/// Sniff the container format from magic bytes.
+String sniffImageFormat(Uint8List b) {
+  if (b.length >= 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E) return 'PNG';
+  if (b.length >= 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) return 'JPEG';
+  if (b.length >= 4 && b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46) return 'GIF';
+  if (b.length >= 12 &&
+      b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 &&
+      b[8] == 0x57 && b[9] == 0x45) {
+    return 'WebP';
+  }
+  if (b.length >= 2 && b[0] == 0x42 && b[1] == 0x4D) return 'BMP';
+  return 'Image';
+}
+
+String colorSpaceName(ui.ColorSpace? space) {
+  switch (space) {
+    case ui.ColorSpace.displayP3:
+      return 'Display P3';
+    case ui.ColorSpace.extendedSRGB:
+      return 'Ext sRGB';
+    case ui.ColorSpace.sRGB:
+    case null:
+      return 'sRGB';
+  }
+}
+
 /// App state: the source image, the tuning parameters and the render loop.
 ///
 /// Conversion runs on a [VtracerWorker] — a background isolate on desktop
@@ -55,6 +123,10 @@ class AppState extends ChangeNotifier {
   int shapeCount = 0;
   int renderMs = 0;
 
+  /// Source/output facts for the info bar.
+  SourceInfo? sourceInfo;
+  OutputInfo? outputInfo;
+
   VtracerConfig _config() {
     return VtracerConfig(
       clustering:
@@ -85,6 +157,11 @@ class AppState extends ChangeNotifier {
     if (data == null) {
       throw Exception('could not decode image');
     }
+    sourceInfo = SourceInfo(
+      sniffImageFormat(bytes),
+      colorSpaceName(frame.image.colorSpace),
+      bytes.length,
+    );
     final image = ColorImage(
       Uint8List.fromList(data.buffer.asUint8List()),
       frame.image.width,
@@ -97,6 +174,7 @@ class AppState extends ChangeNotifier {
 
   /// Loads the built-in synthetic sample (no assets needed).
   Future<void> loadSample() async {
+    sourceInfo = const SourceInfo('Sample', 'sRGB', 480 * 360 * 4);
     await setImage(_sampleImage());
   }
 
@@ -107,6 +185,7 @@ class AppState extends ChangeNotifier {
     unawaited(oldWorker?.dispose());
     svg = null;
     shapeCount = 0;
+    outputInfo = null;
     dirty = false;
     notifyListeners();
     await render();
@@ -152,6 +231,7 @@ class AppState extends ChangeNotifier {
       svg = result;
       renderMs = sw.elapsedMilliseconds;
       shapeCount = RegExp('<path').allMatches(result).length;
+      outputInfo = _measureOutput(result, renderMs);
     } on CancelledError {
       return; // superseded by a newer render
     } catch (e) {
@@ -161,6 +241,21 @@ class AppState extends ChangeNotifier {
       progressFraction = 1;
       notifyListeners();
     }
+  }
+
+  /// Extract the info-bar facts from a produced SVG string.
+  OutputInfo _measureOutput(String svg, int elapsed) {
+    final dims = RegExp(r'width="(\d+)"[^>]*?height="(\d+)"').firstMatch(svg);
+    final layers =
+        RegExp(r'fill="([^"]+)"').allMatches(svg).map((m) => m.group(1)!).toSet();
+    return OutputInfo(
+      width: dims != null ? int.parse(dims.group(1)!) : imageWidth,
+      height: dims != null ? int.parse(dims.group(2)!) : imageHeight,
+      shapes: shapeCount,
+      layers: layers.length,
+      bytes: svg.length,
+      renderMs: elapsed,
+    );
   }
 
   @override
