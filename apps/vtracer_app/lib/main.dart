@@ -1,10 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'controller.dart';
 import 'detail/detail.dart';
+import 'l10n/app_localizations.dart';
+import 'settings.dart';
+import 'theme.dart';
 import 'widgets/canvas_area.dart';
 import 'widgets/options_panel.dart';
+import 'widgets/title_bar.dart';
 
 Future<void> main() async {
   // Sub-windows (the full-detail viewer) run their own engine through this
@@ -14,29 +19,53 @@ Future<void> main() async {
   if (!kIsWeb && await maybeRunDetailWindow()) {
     return;
   }
-  runApp(const VtracerApp());
+  final settings = await SettingsController.load();
+  if (!kIsWeb) {
+    // Chromeless: the native title bar is replaced by AppTitleBar. On
+    // Windows/Linux that includes our own caption buttons; macOS keeps its
+    // traffic lights over the custom bar.
+    await windowManager.ensureInitialized();
+    const options = WindowOptions(
+      title: 'VTracer',
+      titleBarStyle: TitleBarStyle.hidden,
+      minimumSize: Size(760, 480),
+    );
+    await windowManager.waitUntilReadyToShow(options, () async {
+      await windowManager.show();
+    });
+  }
+  runApp(VtracerApp(settings: settings));
 }
 
 /// VTracer — raster to vector converter (Pure Dart port of the vtracer
 /// desktop/web app).
 class VtracerApp extends StatelessWidget {
-  const VtracerApp({super.key});
+  const VtracerApp({super.key, required this.settings});
+
+  final SettingsController settings;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'VTracer',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
+    return AnimatedBuilder(
+      animation: settings,
+      builder: (context, _) => MaterialApp(
+        title: 'VTracer',
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: settings.themeMode,
+        locale: settings.localeOverride,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: HomePage(settings: settings),
       ),
-      home: const HomePage(),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, required this.settings});
+
+  final SettingsController settings;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -57,22 +86,6 @@ class _HomePageState extends State<HomePage> {
       animation: _state,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('VTracer'),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Center(
-                  child: Text(
-                    _state.hasImage
-                        ? '${_state.imageWidth}×${_state.imageHeight}'
-                        : '',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ),
-            ],
-          ),
           body: ExcludeSemantics(
             // Workaround for a Flutter engine bug: with a UI Automation
             // client attached (screen reader, inspection/automation tool),
@@ -91,11 +104,19 @@ class _HomePageState extends State<HomePage> {
             // the bridge never activates and the app is stable — verified
             // by maximizing via WM_SYSCOMMAND with no client attached.
             // Revisit once the engine fix ships.
-            child: Row(
+            child: Column(
               children: [
-                OptionsPanel(state: _state),
-                const VerticalDivider(width: 1),
-                Expanded(child: CanvasArea(state: _state)),
+                AppTitleBar(state: _state, settings: widget.settings),
+                const Divider(height: 1),
+                Expanded(
+                  child: Row(
+                    children: [
+                      OptionsPanel(state: _state),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: CanvasArea(state: _state)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

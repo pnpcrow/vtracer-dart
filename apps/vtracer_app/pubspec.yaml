@@ -41,6 +41,11 @@ dependencies:
   desktop_drop: ^0.8.4
   desktop_multi_window: ^0.3.1
   web: ^1.1.1
+  window_manager: ^0.5.2
+  shared_preferences: ^2.5.5
+  intl: ^0.20.3
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -61,8 +66,10 @@ flutter:
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
-  # the material Icons class.
+  # the Material Icons class.
   uses-material-design: true
+
+  generate: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

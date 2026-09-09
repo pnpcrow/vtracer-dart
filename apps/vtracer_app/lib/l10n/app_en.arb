@@ -1,0 +1,136 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "VTracer",
+  "detailWindowTitle": "VTracer — detail",
+
+  "windowButtonMinimize": "Minimize",
+  "windowButtonMaximize": "Maximize",
+  "windowButtonRestore": "Restore",
+  "windowButtonClose": "Close",
+
+  "panelDownloadSvg": "Download as SVG",
+  "panelSelectFile": "Select file",
+  "panelTrySample": "Try a sample",
+  "panelApply": "Apply",
+  "panelRendering": "Rendering…",
+
+  "groupClustering": "Clustering",
+  "groupClusteringDesc": "How pixels are segmented and grouped into color layers.",
+  "clusterBw": "B/W",
+  "clusterBwTip": "Black & White (Binary Image)",
+  "clusterColor": "Color",
+  "clusterColorTip": "True Color Image",
+  "hierarchyCutout": "Cutout",
+  "hierarchyCutoutTip": "Shapes disjoint with others",
+  "hierarchyStacked": "Stacked",
+  "hierarchyStackedTip": "Stack shapes on top of another",
+
+  "sliderFilterSpeckle": "Filter Speckle",
+  "sliderFilterSpeckleHint": "(Cleaner)",
+  "sliderFilterSpeckleDesc": "Discard patches smaller than this many pixels.",
+  "sliderColorPrecision": "Color Precision",
+  "sliderColorPrecisionHint": "(More accurate)",
+  "sliderColorPrecisionDesc": "Number of significant bits to use in an RGB channel.",
+  "sliderGradientStep": "Gradient Step",
+  "sliderGradientStepHint": "(Less layers)",
+  "sliderGradientStepDesc": "Color difference between gradient layers.",
+
+  "groupCurveFitting": "Curve Fitting",
+  "groupCurveFittingDesc": "How clusters are converted into vector shapes.",
+  "fitPixel": "Pixel",
+  "fitPixelTip": "Exact cluster boundary",
+  "fitPolygon": "Polygon",
+  "fitPolygonTip": "Simplify to Polygon",
+  "fitSpline": "Spline",
+  "fitSplineTip": "Smooth and Curve-fit",
+  "sliderCornerThreshold": "Corner Threshold",
+  "sliderCornerThresholdHint": "(Smoother)",
+  "sliderCornerThresholdDesc": "Minimum momentary angle (degrees) to be considered a corner.",
+  "sliderSegmentLength": "Segment Length",
+  "sliderSegmentLengthHint": "(More coarse)",
+  "sliderSegmentLengthDesc": "Subdivide until all segments are shorter than this length.",
+  "sliderSpliceThreshold": "Splice Threshold",
+  "sliderSpliceThresholdHint": "(More accurate)",
+  "sliderSpliceThresholdDesc": "Minimum angle displacement (degrees) to splice two curves.",
+
+  "panelInputSummary": "Input: {width}×{height} px",
+  "@panelInputSummary": {
+    "placeholders": {
+      "width": {"type": "int"},
+      "height": {"type": "int"}
+    }
+  },
+  "panelOutputSummary": "Output: {shapes} shapes, {ms} ms",
+  "@panelOutputSummary": {
+    "placeholders": {
+      "shapes": {"type": "int"},
+      "ms": {"type": "int"}
+    }
+  },
+
+  "snackbarSvgSaved": "SVG saved.",
+  "snackbarLoadFailed": "Could not load image: {error}",
+  "@snackbarLoadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+
+  "canvasDropHint": "Drag an image here",
+  "canvasDropHintHover": "Drop to trace",
+  "canvasDropHintSub": "or use “Select file” / “Try a sample” on the left",
+  "tooltipOpenFullView": "Open full view in a new window",
+  "bannerDirty": "Parameters changed — press Apply to update the trace",
+
+  "infoBarInput": "Input",
+  "infoBarOutput": "Output",
+  "infoBarPending": "pending…",
+  "infoBarShapes": "{count} shapes",
+  "@infoBarShapes": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "infoBarLayers": "{count} layers",
+  "@infoBarLayers": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "infoBarPreviewScale": "Preview {percent}%",
+  "@infoBarPreviewScale": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+
+  "progressConverting": "Converting…",
+  "progressPhaseSegment": "Clustering",
+  "progressPhaseCompose": "Composing",
+  "progressPhaseOptimize": "Optimizing",
+
+  "settingsTitle": "Settings",
+  "settingsTheme": "Theme",
+  "settingsThemeSystem": "System",
+  "settingsThemeSystemDesc": "Follows your OS light/dark setting (default).",
+  "settingsThemeLight": "Light",
+  "settingsThemeLightDesc": "Bright surfaces; best in well-lit environments.",
+  "settingsThemeDark": "Dark",
+  "settingsThemeDarkDesc": "Dimmed surfaces; easier on the eyes at night.",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System",
+  "settingsLanguageSystemDesc": "Matches your OS language (default).",
+  "settingsLanguageEn": "English",
+  "settingsLanguageEnDesc": "Use English for menus and messages.",
+  "settingsLanguageKo": "한국어",
+  "settingsLanguageKoDesc": "메뉴와 안내를 한국어로 표시합니다.",
+  "settingsClose": "Close",
+
+  "detailChars": "{count} chars",
+  "@detailChars": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  }
+}

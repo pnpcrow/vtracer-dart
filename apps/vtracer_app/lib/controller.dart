@@ -117,7 +117,10 @@ class AppState extends ChangeNotifier {
   /// Parameters changed since the last render and await an [apply].
   bool dirty = false;
   bool get needsApply => dirty && hasImage && !rendering;
-  String progressLabel = '';
+
+  /// Pipeline phase of the in-flight render; null while converting before
+  /// the first progress report. The UI maps this to a localized label.
+  Phase? progressPhase;
   double progressFraction = 0;
   String? error;
   int shapeCount = 0;
@@ -209,7 +212,7 @@ class AppState extends ChangeNotifier {
     rendering = true;
     dirty = false;
     error = null;
-    progressLabel = 'Converting…';
+    progressPhase = null;
     progressFraction = 0;
     notifyListeners();
 
@@ -218,11 +221,7 @@ class AppState extends ChangeNotifier {
       final result = await worker.renderSvg(
         _config(),
         onProgress: (p) {
-          progressLabel = switch (p.phase) {
-            Phase.segment => 'Clustering',
-            Phase.compose => 'Composing',
-            Phase.optimize => 'Optimizing',
-          };
+          progressPhase = p.phase;
           progressFraction = p.fraction;
           notifyListeners();
         },

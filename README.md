@@ -157,6 +157,33 @@ format, resolution, color space and encoded size; the output's dimensions,
 shape and layer counts, SVG size and render time; and the preview's current
 display scale (recomputed as the window is resized).
 
+### Chromeless window, theming and localization
+
+The desktop app runs **chromeless**: the native title bar is replaced by a
+custom in-app bar (`window_manager`) — drag anywhere on it to move the
+window, double-click to maximize/restore, and Windows-style
+minimize/maximize/close caption buttons on the right. macOS keeps its
+native traffic lights over the custom bar; the web build shows the bar
+without window controls.
+
+The gear button in the title bar opens the **settings**:
+
+- **Theme** — Light / Dark / **System (default)**. Both modes are complete
+  Material 3 themes (indigo seed); the canvas paper becomes a
+  theme-tinted transparency checkerboard, and every hardcoded color was
+  moved to `ColorScheme`/a `CanvasColors` theme extension. With *System*
+  selected the app follows the OS light/dark setting live.
+- **Language** — English / 한국어 / **System (default)**, via Flutter `gen-l10n`
+  ARB catalogs (`lib/l10n/`). Switching is instant; the system default
+  follows the OS locale.
+- Choices persist across restarts (`shared_preferences`); the full-detail
+  sub-window loads the same preferences, so all windows share one
+  theme/language.
+
+Every option in the tuning panel carries a short **helper description**
+under its label (what the slider controls, what a mode does) in addition
+to the hover tooltips, localized like the rest of the UI.
+
 ### Known issue: crash on maximize with a UI Automation client attached
 
 The Flutter Windows engine's accessibility bridge has a bug (access

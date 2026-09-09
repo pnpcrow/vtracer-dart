@@ -4,10 +4,13 @@ import 'dart:ui' as ui;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:vtracer/vtracer.dart' show Phase;
 
 import '../controller.dart';
 import '../detail/detail.dart';
+import '../l10n/app_localizations.dart';
 import '../preview.dart';
+import '../theme.dart';
 
 /// The canvas: a drop zone until an image is loaded, then the traced SVG.
 ///
@@ -83,6 +86,7 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   Widget _canvas(BuildContext context) {
     final state = widget.state;
+    final canvas = Theme.of(context).extension<CanvasColors>()!;
     return DropTarget(
       onDragDone: (details) async {
         final file = details.files.first;
@@ -91,8 +95,9 @@ class _CanvasAreaState extends State<CanvasArea> {
           await state.loadImageBytes(bytes);
         } catch (e) {
           if (!mounted) return;
+          final l10n = AppLocalizations.of(this.context)!;
           ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(content: Text('Could not load image: $e')),
+            SnackBar(content: Text(l10n.snackbarLoadFailed('$e'))),
           );
         }
       },
@@ -100,9 +105,10 @@ class _CanvasAreaState extends State<CanvasArea> {
       onDragExited: (_) => setState(() => _hovering = false),
       child: Stack(
         children: [
-          // Checkerboard background so transparency is visible.
           Container(
-            color: _hovering ? Colors.blue.withValues(alpha: 0.06) : Colors.white,
+            color: _hovering
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.06)
+                : canvas.dropBackdrop,
             alignment: Alignment.center,
             padding: const EdgeInsets.all(24),
             child: state.hasImage ? _result(context) : _dropHint(context),
@@ -115,14 +121,7 @@ class _CanvasAreaState extends State<CanvasArea> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Material(
-                color: Colors.red.shade700,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(state.error!,
-                      style: const TextStyle(color: Colors.white)),
-                ),
-              ),
+              child: _errorBanner(context),
             ),
         ],
       ),
@@ -130,12 +129,15 @@ class _CanvasAreaState extends State<CanvasArea> {
   }
 
   Widget _dropHint(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final canvas = theme.extension<CanvasColors>()!;
     return Container(
       width: 420,
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 32),
       decoration: BoxDecoration(
         border: Border.all(
-          color: _hovering ? Colors.blue : Colors.black45,
+          color: _hovering ? theme.colorScheme.primary : canvas.dropBorder,
           width: 2,
         ),
         borderRadius: BorderRadius.circular(4),
@@ -143,21 +145,33 @@ class _CanvasAreaState extends State<CanvasArea> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_hovering ? Icons.file_download : Icons.image_outlined,
-              size: 48, color: _hovering ? Colors.blue : Colors.black54),
+          Icon(
+            _hovering ? Icons.file_download : Icons.image_outlined,
+            size: 48,
+            color: _hovering
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 12),
           Text(
-            _hovering ? 'Drop to trace' : 'Drag an image here',
-            style: Theme.of(context).textTheme.titleMedium,
+            _hovering ? l10n.canvasDropHintHover : l10n.canvasDropHint,
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          const Text('or use “Select file” / “Try a sample” on the left'),
+          Text(
+            l10n.canvasDropHintSub,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
   Widget _result(BuildContext context) {
+    final canvas = Theme.of(context).extension<CanvasColors>()!;
     final preview = _preview;
     final baked = _bakedSvg;
     final svg = widget.state.svg;
@@ -171,24 +185,28 @@ class _CanvasAreaState extends State<CanvasArea> {
           maxHeight: constraints.maxHeight,
         ),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.black26),
-          color: Colors.white,
+          color: canvas.paper,
+          border: Border.all(color: canvas.paperBorder),
         ),
-        alignment: Alignment.center,
         clipBehavior: Clip.hardEdge,
-        child: (preview != null && baked == svg)
-            ? SizedBox(
-                // Explicit size: a bare RawImage sizes to its intrinsic
-                // pixel size instead of filling the frame.
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child: RawImage(
-                  image: preview,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.medium,
-                ),
-              )
-            : const Center(child: CircularProgressIndicator()),
+        child: CustomPaint(
+          // Checkerboard paper so transparency in the trace is visible in
+          // both light and dark themes.
+          foregroundPainter: _CheckerPainter(canvas: canvas),
+          child: (preview != null && baked == svg)
+              ? SizedBox(
+                  // Explicit size: a bare RawImage sizes to its intrinsic
+                  // pixel size instead of filling the frame.
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: RawImage(
+                    image: preview,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.medium,
+                  ),
+                )
+              : const Center(child: CircularProgressIndicator()),
+        ),
       );
     });
   }
@@ -210,6 +228,7 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   /// The bottom strip: source/output facts and the preview zoom level.
   Widget _infoBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final state = widget.state;
     final src = state.sourceInfo;
     final out = state.outputInfo;
@@ -232,7 +251,7 @@ class _CanvasAreaState extends State<CanvasArea> {
                 children: [
                   _barSegment(
                     style,
-                    'Input',
+                    l10n.infoBarInput,
                     [
                       if (src != null) src.format,
                       '${state.imageWidth}×${state.imageHeight}',
@@ -243,14 +262,14 @@ class _CanvasAreaState extends State<CanvasArea> {
                   const SizedBox(width: 20),
                   _barSegment(
                     style,
-                    'Output',
+                    l10n.infoBarOutput,
                     out == null
-                        ? ['SVG', 'pending…']
+                        ? ['SVG', l10n.infoBarPending]
                         : [
                             'SVG',
                             '${out.width}×${out.height}',
-                            '${out.shapes} shapes',
-                            '${out.layers} layers',
+                            l10n.infoBarShapes(out.shapes),
+                            l10n.infoBarLayers(out.layers),
                             formatBytes(out.bytes),
                             '${out.renderMs} ms',
                           ],
@@ -263,7 +282,7 @@ class _CanvasAreaState extends State<CanvasArea> {
           ValueListenableBuilder<double?>(
             valueListenable: _previewScale,
             builder: (context, scale, _) => Text(
-              scale == null ? '' : 'Preview ${(scale * 100).round()}%',
+              scale == null ? '' : l10n.infoBarPreviewScale((scale * 100).round()),
               style: style?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
@@ -289,11 +308,12 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   /// Opens the trace full-detail in a separate window/tab.
   Widget _detailButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Positioned(
       top: 8,
       right: 8,
       child: IconButton.filledTonal(
-        tooltip: 'Open full view in a new window',
+        tooltip: l10n.tooltipOpenFullView,
         icon: const Icon(Icons.open_in_full),
         onPressed:
             widget.state.rendering ? null : () => openDetailView(widget.state.svg!),
@@ -303,24 +323,48 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   /// A small banner while parameters have changed but not been applied.
   Widget _dirtyHint(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
       child: Material(
-        color: Colors.indigo.shade700,
+        color: scheme.primary,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'Parameters changed — press Apply to update the trace',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            l10n.bannerDirty,
+            style: TextStyle(color: scheme.onPrimary, fontSize: 13),
           ),
         ),
       ),
     );
   }
 
+  Widget _errorBanner(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.error,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          widget.state.error!,
+          style: TextStyle(color: scheme.onError),
+        ),
+      ),
+    );
+  }
+
   Widget _progressOverlay(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final state = widget.state;
+    final label = switch (state.progressPhase) {
+      Phase.segment => l10n.progressPhaseSegment,
+      Phase.compose => l10n.progressPhaseCompose,
+      Phase.optimize => l10n.progressPhaseOptimize,
+      null => l10n.progressConverting,
+    };
     return Positioned(
       top: 0,
       left: 0,
@@ -334,13 +378,12 @@ class _CanvasAreaState extends State<CanvasArea> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${widget.state.progressLabel} '
-                '${(widget.state.progressFraction * 100).round()}%',
+                '$label ${(state.progressFraction * 100).round()}%',
                 style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
               const SizedBox(height: 6),
               LinearProgressIndicator(
-                value: widget.state.progressFraction,
+                value: state.progressFraction,
                 minHeight: 6,
               ),
             ],
@@ -349,4 +392,31 @@ class _CanvasAreaState extends State<CanvasArea> {
       ),
     );
   }
+}
+
+/// Transparency checkerboard for the preview paper, theme-tinted via
+/// [CanvasColors].
+class _CheckerPainter extends CustomPainter {
+  static const _square = 12.0;
+
+  final CanvasColors canvas;
+
+  _CheckerPainter({required this.canvas});
+
+  @override
+  void paint(Canvas canvas, ui.Size size) {
+    final paint = Paint()..color = this.canvas.checker;
+    for (var y = 0.0; y < size.height; y += _square) {
+      final rowOdd = (y / _square).round().isOdd;
+      for (var x = 0.0; x < size.width; x += _square) {
+        final colOdd = (x / _square).round().isOdd;
+        if (rowOdd != colOdd) continue;
+        canvas.drawRect(Offset(x, y) & const Size.square(_square), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CheckerPainter oldDelegate) =>
+      oldDelegate.canvas != canvas;
 }

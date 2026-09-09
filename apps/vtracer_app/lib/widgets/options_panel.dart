@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controller.dart';
+import '../l10n/app_localizations.dart';
 
-/// The tuning panel — the same controls as the vtracer webapp.
+/// The tuning panel — the same controls as the vtracer webapp, with a short
+/// helper description under each setting.
 class OptionsPanel extends StatelessWidget {
   final AppState state;
 
@@ -12,31 +14,32 @@ class OptionsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorOptions = state.clustering == UiClustering.color;
     final splineOptions = state.mode == UiFitMode.spline;
 
     return Container(
       width: 320,
-      color: Colors.white.withValues(alpha: 0.92),
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           FilledButton.icon(
             onPressed: state.hasImage ? () => _saveSvg(context) : null,
             icon: const Icon(Icons.download),
-            label: const Text('Download as SVG'),
+            label: Text(l10n.panelDownloadSvg),
           ),
           const SizedBox(height: 8),
           FilledButton.tonalIcon(
             onPressed: () => _pickImage(context),
             icon: const Icon(Icons.image_outlined),
-            label: const Text('Select file'),
+            label: Text(l10n.panelSelectFile),
           ),
           const SizedBox(height: 8),
           FilledButton.tonalIcon(
             onPressed: state.rendering ? null : state.loadSample,
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Try a sample'),
+            label: Text(l10n.panelTrySample),
           ),
           const SizedBox(height: 8),
           // Conversions are too heavy for live re-rendering while tuning, so
@@ -44,32 +47,31 @@ class OptionsPanel extends StatelessWidget {
           FilledButton.icon(
             onPressed: state.needsApply ? state.apply : null,
             icon: const Icon(Icons.play_arrow_rounded),
-            label: Text(state.rendering ? 'Rendering…' : 'Apply'),
+            label: Text(state.rendering ? l10n.panelRendering : l10n.panelApply),
           ),
           const Divider(height: 32),
 
-          _label(
-            'Clustering',
-            tooltip: 'Algorithm for segmentation and grouping of pixel clusters',
-          ),
+          _groupHeader(context, l10n.groupClustering, l10n.groupClusteringDesc),
           Row(children: [
             Expanded(
               child: _toggle(
-                'B/W',
+                context,
+                l10n.clusterBw,
                 selected: state.clustering == UiClustering.bw,
-                tooltip: 'Black & White (Binary Image)',
-                onTap: () => state.update(() =>
-                    state.clustering = UiClustering.bw),
+                tooltip: l10n.clusterBwTip,
+                onTap: () =>
+                    state.update(() => state.clustering = UiClustering.bw),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _toggle(
-                'Color',
+                context,
+                l10n.clusterColor,
                 selected: state.clustering == UiClustering.color,
-                tooltip: 'True Color Image',
-                onTap: () => state.update(() =>
-                    state.clustering = UiClustering.color),
+                tooltip: l10n.clusterColorTip,
+                onTap: () =>
+                    state.update(() => state.clustering = UiClustering.color),
               ),
             ),
           ]),
@@ -77,30 +79,33 @@ class OptionsPanel extends StatelessWidget {
           Row(children: [
             Expanded(
               child: _toggle(
-                'Cutout',
+                context,
+                l10n.hierarchyCutout,
                 selected: state.hierarchical == UiHierarchical.cutout,
-                tooltip: 'Shapes disjoint with others',
-                onTap: () => state.update(() =>
-                    state.hierarchical = UiHierarchical.cutout),
+                tooltip: l10n.hierarchyCutoutTip,
+                onTap: () => state.update(
+                    () => state.hierarchical = UiHierarchical.cutout),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _toggle(
-                'Stacked',
+                context,
+                l10n.hierarchyStacked,
                 selected: state.hierarchical == UiHierarchical.stacked,
-                tooltip: 'Stack shapes on top of another',
-                onTap: () => state.update(() =>
-                    state.hierarchical = UiHierarchical.stacked),
+                tooltip: l10n.hierarchyStackedTip,
+                onTap: () => state.update(
+                    () => state.hierarchical = UiHierarchical.stacked),
               ),
             ),
           ]),
           const SizedBox(height: 16),
 
           _slider(
-            label: 'Filter Speckle',
-            hint: '(Cleaner)',
-            tooltip: 'Discard patches smaller than X px in size',
+            context,
+            label: l10n.sliderFilterSpeckle,
+            hint: l10n.sliderFilterSpeckleHint,
+            description: l10n.sliderFilterSpeckleDesc,
             value: state.filterSpeckle.toDouble(),
             min: 1,
             max: 16,
@@ -111,9 +116,10 @@ class OptionsPanel extends StatelessWidget {
           ),
           if (colorOptions) ...[
             _slider(
-              label: 'Color Precision',
-              hint: '(More accurate)',
-              tooltip: 'Number of significant bits to use in a RGB channel',
+              context,
+              label: l10n.sliderColorPrecision,
+              hint: l10n.sliderColorPrecisionHint,
+              description: l10n.sliderColorPrecisionDesc,
               value: state.colorPrecision.toDouble(),
               min: 1,
               max: 8,
@@ -123,9 +129,10 @@ class OptionsPanel extends StatelessWidget {
                   state.update(() => state.colorPrecision = v.round()),
             ),
             _slider(
-              label: 'Gradient Step',
-              hint: '(Less layers)',
-              tooltip: 'Color difference between gradient layers',
+              context,
+              label: l10n.sliderGradientStep,
+              hint: l10n.sliderGradientStepHint,
+              description: l10n.sliderGradientStepDesc,
               value: state.layerDifference.toDouble(),
               min: 0,
               max: 255,
@@ -137,44 +144,45 @@ class OptionsPanel extends StatelessWidget {
           ],
           const Divider(height: 32),
 
-          _label(
-            'Curve Fitting',
-            tooltip: 'Algorithm for converting clusters to shapes',
-          ),
+          _groupHeader(
+              context, l10n.groupCurveFitting, l10n.groupCurveFittingDesc),
           Row(children: [
             Expanded(
               child: _toggle(
-                'Pixel',
+                context,
+                l10n.fitPixel,
                 selected: state.mode == UiFitMode.pixel,
-                tooltip: 'Exact cluster boundary',
+                tooltip: l10n.fitPixelTip,
                 onTap: () => state.update(() => state.mode = UiFitMode.pixel),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _toggle(
-                'Polygon',
+                context,
+                l10n.fitPolygon,
                 selected: state.mode == UiFitMode.polygon,
-                tooltip: 'Simplify to Polygon',
+                tooltip: l10n.fitPolygonTip,
                 onTap: () => state.update(() => state.mode = UiFitMode.polygon),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _toggle(
-                'Spline',
+                context,
+                l10n.fitSpline,
                 selected: state.mode == UiFitMode.spline,
-                tooltip: 'Smooth and Curve-fit',
+                tooltip: l10n.fitSplineTip,
                 onTap: () => state.update(() => state.mode = UiFitMode.spline),
               ),
             ),
           ]),
           if (splineOptions) ...[
             _slider(
-              label: 'Corner Threshold',
-              hint: '(Smoother)',
-              tooltip:
-                  'Minimum momentary angle (degrees) to be considered a corner',
+              context,
+              label: l10n.sliderCornerThreshold,
+              hint: l10n.sliderCornerThresholdHint,
+              description: l10n.sliderCornerThresholdDesc,
               value: state.cornerThreshold.toDouble(),
               min: 0,
               max: 180,
@@ -184,23 +192,22 @@ class OptionsPanel extends StatelessWidget {
                   state.update(() => state.cornerThreshold = v.round()),
             ),
             _slider(
-              label: 'Segment Length',
-              hint: '(More coarse)',
-              tooltip:
-                  'Subdivide until all segments are shorter than this length',
+              context,
+              label: l10n.sliderSegmentLength,
+              hint: l10n.sliderSegmentLengthHint,
+              description: l10n.sliderSegmentLengthDesc,
               value: state.lengthThreshold,
               min: 3.5,
               max: 10,
               divisions: 13,
               valueText: state.lengthThreshold.toStringAsFixed(1),
-              onChanged: (v) =>
-                  state.update(() => state.lengthThreshold = v),
+              onChanged: (v) => state.update(() => state.lengthThreshold = v),
             ),
             _slider(
-              label: 'Splice Threshold',
-              hint: '(More accurate)',
-              tooltip:
-                  'Minimum angle displacement (degrees) to splice two curves',
+              context,
+              label: l10n.sliderSpliceThreshold,
+              hint: l10n.sliderSpliceThresholdHint,
+              description: l10n.sliderSpliceThresholdDesc,
               value: state.spliceThreshold.toDouble(),
               min: 0,
               max: 180,
@@ -213,8 +220,8 @@ class OptionsPanel extends StatelessWidget {
           const Divider(height: 32),
           if (state.hasImage)
             Text(
-              'Input: ${state.imageWidth}×${state.imageHeight} px\n'
-              'Output: ${state.shapeCount} shapes, ${state.renderMs} ms',
+              '${l10n.panelInputSummary(state.imageWidth, state.imageHeight)}\n'
+              '${l10n.panelOutputSummary(state.shapeCount, state.renderMs)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
         ],
@@ -231,8 +238,10 @@ class OptionsPanel extends StatelessWidget {
       await state.loadImageBytes(bytes);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Could not load image: $e')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.snackbarLoadFailed('$e'))),
+        );
       }
     }
   }
@@ -250,30 +259,48 @@ class OptionsPanel extends StatelessWidget {
       allowedExtensions: ['svg'],
     );
     if (context.mounted) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('SVG saved.')),
+        SnackBar(content: Text(l10n.snackbarSvgSaved)),
       );
     }
   }
 
-  Widget _label(String text, {String? tooltip}) {
-    final textWidget = Text(text, style: const TextStyle(fontWeight: FontWeight.w600));
-    return tooltip == null
-        ? textWidget
-        : Tooltip(message: tooltip, child: textWidget);
+  /// A section header with its helper description underneath.
+  Widget _groupHeader(BuildContext context, String title, String description) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            )),
+        const SizedBox(height: 2),
+        Text(
+          description,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
   }
 
   Widget _toggle(
+    BuildContext context,
     String label, {
     required bool selected,
     required VoidCallback onTap,
     String? tooltip,
   }) {
+    final primary = Theme.of(context).colorScheme.primary;
     final button = OutlinedButton(
       style: OutlinedButton.styleFrom(
-        backgroundColor: selected ? Colors.blue.withValues(alpha: 0.15) : null,
-        foregroundColor: selected ? Colors.blue : null,
-        side: selected ? const BorderSide(color: Colors.blue) : null,
+        backgroundColor: selected ? primary.withValues(alpha: 0.15) : null,
+        foregroundColor: selected ? primary : null,
+        side: selected ? BorderSide(color: primary) : null,
         padding: const EdgeInsets.symmetric(vertical: 10),
         minimumSize: const Size.fromHeight(36),
       ),
@@ -283,10 +310,11 @@ class OptionsPanel extends StatelessWidget {
     return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 
-  Widget _slider({
+  Widget _slider(
+    BuildContext context, {
     required String label,
     required String hint,
-    required String tooltip,
+    required String description,
     required double value,
     required double min,
     required double max,
@@ -294,36 +322,42 @@ class OptionsPanel extends StatelessWidget {
     required String valueText,
     required ValueChanged<double> onChanged,
   }) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        Tooltip(
-          message: tooltip,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-              Text(hint,
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey.shade600)),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface)),
+            Text(hint,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant)),
+          ],
         ),
         Text(valueText,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        SliderTheme(
-          data: const SliderThemeData(
-            trackHeight: 16,
-            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 7),
-          ),
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            onChanged: onChanged,
-          ),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: theme.colorScheme.primary,
+            )),
+        // The helper description explains what the slider controls; the
+        // value-dependent hint next to the label shows the direction.
+        Text(
+          description,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          divisions: divisions,
+          onChanged: onChanged,
         ),
         const SizedBox(height: 8),
       ],

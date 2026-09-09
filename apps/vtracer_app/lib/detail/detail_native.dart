@@ -7,7 +7,10 @@ import 'dart:ui' as ui;
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../preview.dart';
+import '../settings.dart';
+import '../theme.dart';
 
 /// Whether this engine was launched as a detail-viewer sub-window, and if
 /// so, renders it. Returns true when the sub-window app was started (the
@@ -24,7 +27,9 @@ Future<bool> maybeRunDetailWindow() async {
       return false;
     }
     if (args is Map<String, dynamic> && args['kind'] == 'detail') {
-      runApp(DetailViewerApp(io.File(args['path'] as String)));
+      // Shares the main window's persisted preferences (theme/language).
+      final settings = await SettingsController.load();
+      runApp(DetailViewerApp(io.File(args['path'] as String), settings));
       return true;
     }
     return false;
@@ -58,20 +63,30 @@ Future<void> openDetailView(String svg) async {
 /// (debounced) on resize, capped at the monitor's full resolution.
 class DetailViewerApp extends StatelessWidget {
   final io.File file;
+  final SettingsController settings;
 
-  const DetailViewerApp(this.file, {super.key});
+  const DetailViewerApp(this.file, this.settings, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'VTracer — detail',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        // Same engine-bug workaround as the main window (see main.dart):
-        // empty the semantics stream in this engine too.
-        body: ExcludeSemantics(
-          child: _DetailPage(file: file),
+    return AnimatedBuilder(
+      animation: settings,
+      builder: (context, _) => MaterialApp(
+        onGenerateTitle: (context) =>
+            AppLocalizations.of(context)!.detailWindowTitle,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: settings.themeMode,
+        locale: settings.localeOverride,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          // Same engine-bug workaround as the main window (see main.dart):
+          // empty the semantics stream in this engine too.
+          body: ExcludeSemantics(
+            child: _DetailPage(file: file),
+          ),
         ),
       ),
     );
@@ -102,7 +117,7 @@ class _DetailPageState extends State<_DetailPage> with WidgetsBindingObserver {
       setState(() => _svg = svg);
       _rasterize();
     }, onError: (Object e) {
-      if (mounted) setState(() => _error = 'could not load: $e');
+      if (mounted) setState(() => _error = '$e');
     });
   }
 
@@ -148,6 +163,7 @@ class _DetailPageState extends State<_DetailPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final image = _image;
     return Stack(
       fit: StackFit.expand,
@@ -159,14 +175,19 @@ class _DetailPageState extends State<_DetailPage> with WidgetsBindingObserver {
             filterQuality: FilterQuality.medium,
           )
         else if (_error != null)
-          Center(child: Text(_error!, style: const TextStyle(color: Colors.white70)))
+          Center(
+            child: Text(
+              l10n.snackbarLoadFailed(_error!),
+              style: const TextStyle(color: Colors.white70),
+            ),
+          )
         else
           const Center(child: CircularProgressIndicator(color: Colors.white)),
         Positioned(
           left: 12,
           bottom: 12,
           child: Text(
-            _svg == null ? '' : '${_svg!.length} chars',
+            _svg == null ? '' : l10n.detailChars(_svg!.length),
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ),
