@@ -1,0 +1,11 @@
+name: vtracer_dart_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - packages/visioncortex
+  - packages/vtracer
+  - packages/vtracer_cli
+  - apps/vtracer_app

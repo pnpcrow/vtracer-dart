@@ -1,0 +1,26 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Compiled outputs
+*.exe
+bin/vtracer
+
+# Test artifacts
+testdata/*.svg
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Crash-analysis tooling
+tool/bin/
+.crashdumps/
