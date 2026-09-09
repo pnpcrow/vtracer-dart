@@ -191,8 +191,9 @@ class _CanvasAreaState extends State<CanvasArea> {
         clipBehavior: Clip.hardEdge,
         child: CustomPaint(
           // Checkerboard paper so transparency in the trace is visible in
-          // both light and dark themes.
-          foregroundPainter: _CheckerPainter(canvas: canvas),
+          // both light and dark themes. `painter` (not `foregroundPainter`)
+          // keeps the grid behind the image.
+          painter: _CheckerPainter(canvas: canvas),
           child: (preview != null && baked == svg)
               ? SizedBox(
                   // Explicit size: a bare RawImage sizes to its intrinsic
