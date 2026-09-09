@@ -281,9 +281,10 @@ String _fmtNum(double v, int? precision) {
 }
 
 double _pow10(int p) {
-  var r = 1.0;
-  for (var i = 0; i < p; i++) {
-    r *= 10.0;
-  }
-  return r;
+  const table = [
+    1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 10000000.0,
+    100000000.0,
+  ];
+  if (p < 0) return 1.0;
+  return p < table.length ? table[p] : table.last * _pow10(p - table.length + 1);
 }

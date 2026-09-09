@@ -89,6 +89,13 @@ class Layer {
   Layer(this.paint, this.mask);
 
   Layer clone() => Layer(paint.clone(), mask.clone());
+
+  /// A copy sharing the mask: color fitting replaces [paint] (and may
+  /// rebuild layer lists) but never mutates masks, so masks downstream are
+  /// effectively read-only and safe to share with a cached segmentation.
+  Layer.sharingMask(Layer other)
+      : paint = other.paint,
+        mask = other.mask;
 }
 
 /// Frontend output: ordered layers over a canvas, in paint order.
@@ -105,6 +112,14 @@ class Segmentation {
       : width = other.width,
         height = other.height,
         layers = other.layers.map((l) => l.clone()).toList();
+
+  /// A copy whose layers share the original masks. Color fitters assign new
+  /// paints but never mutate masks, so re-finishing a cached segmentation
+  /// does not need to deep-copy mask data.
+  Segmentation.sharingMasks(Segmentation other)
+      : width = other.width,
+        height = other.height,
+        layers = [for (final l in other.layers) Layer.sharingMask(l)];
 }
 
 /// A single drawing command in a subpath, in absolute document space.

@@ -79,8 +79,9 @@ class Pipeline {
   /// Phase 2 of 2 — color fitting → compositing → optimization, reusing a
   /// [Segmentation] produced by [segment].
   ///
-  /// The segmentation is cloned internally (color fitting mutates it), so the
-  /// cached copy stays pristine.
+  /// The segmentation is copied internally (color fitting reassigns layer
+  /// paints), so the cached copy stays pristine; masks are shared rather
+  /// than deep-copied because nothing downstream mutates them.
   VectorDoc finish(Segmentation seg) {
     return finishWithProgress(seg, CancelToken(), (_) {});
   }
@@ -89,7 +90,7 @@ class Pipeline {
   VectorDoc finishWithProgress(
       Segmentation seg, CancelToken cancel, void Function(Progress) onProgress) {
     final ctx = Ctx(cancel, onProgress);
-    return _finishCtx(Segmentation.clone(seg), ctx);
+    return _finishCtx(Segmentation.sharingMasks(seg), ctx);
   }
 
   /// Downstream stages (color fit → compose → optimize) over an owned
