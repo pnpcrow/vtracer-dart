@@ -1,10 +1,19 @@
+import 'dart:ui' as ui;
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../controller.dart';
+import '../detail/detail.dart';
+import '../preview.dart';
 
 /// The canvas: a drop zone until an image is loaded, then the traced SVG.
+///
+/// The trace is shown as a pre-rasterized image (see [rasterizeSvg]) rather
+/// than a live vector picture: extremely complex traces dragged the
+/// rasterizer down (and crashed it at fullscreen), while a raster at a
+/// monitor-capped size displays at any window size for free. Full-detail
+/// viewing happens in a separate window.
 class CanvasArea extends StatefulWidget {
   final AppState state;
 
@@ -16,6 +25,43 @@ class CanvasArea extends StatefulWidget {
 
 class _CanvasAreaState extends State<CanvasArea> {
   bool _hovering = false;
+  ui.Image? _preview;
+
+  /// The SVG string baked into [_preview]; the raster is rebuilt only when
+  /// the trace changes, never on window resize.
+  String? _bakedSvg;
+
+  @override
+  void didUpdateWidget(CanvasArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _refreshPreview();
+  }
+
+  @override
+  void dispose() {
+    _preview?.dispose();
+    _preview = null;
+    super.dispose();
+  }
+
+  void _refreshPreview() {
+    final svg = widget.state.svg;
+    if (svg == null || svg == _bakedSvg) return;
+
+    final cap = previewCap(View.of(context));
+    rasterizeSvg(svg, cap).then((image) {
+      if (!mounted || widget.state.svg != svg) {
+        image.dispose();
+        return;
+      }
+      final old = _preview;
+      setState(() {
+        _preview = image;
+        _bakedSvg = svg;
+      });
+      old?.dispose();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +90,7 @@ class _CanvasAreaState extends State<CanvasArea> {
             padding: const EdgeInsets.all(24),
             child: state.hasImage ? _result(context) : _dropHint(context),
           ),
+          if (state.svg != null) _detailButton(context),
           if (state.rendering) _progressOverlay(context),
           if (state.needsApply) _dirtyHint(context),
           if (state.error != null)
@@ -94,6 +141,8 @@ class _CanvasAreaState extends State<CanvasArea> {
   }
 
   Widget _result(BuildContext context) {
+    final preview = _preview;
+    final baked = _bakedSvg;
     final svg = widget.state.svg;
     return LayoutBuilder(builder: (context, constraints) {
       return Container(
@@ -105,16 +154,37 @@ class _CanvasAreaState extends State<CanvasArea> {
           border: Border.all(color: Colors.black26),
           color: Colors.white,
         ),
-        child: svg == null
-            ? const Center(child: CircularProgressIndicator())
-            : SvgPicture.string(
-                svg,
-                fit: BoxFit.contain,
-                placeholderBuilder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              ),
+        alignment: Alignment.center,
+        clipBehavior: Clip.hardEdge,
+        child: (preview != null && baked == svg)
+            ? SizedBox(
+                // Explicit size: a bare RawImage sizes to its intrinsic
+                // pixel size instead of filling the frame.
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: RawImage(
+                  image: preview,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                ),
+              )
+            : const Center(child: CircularProgressIndicator()),
       );
     });
+  }
+
+  /// Opens the trace full-detail in a separate window/tab.
+  Widget _detailButton(BuildContext context) {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: IconButton.filledTonal(
+        tooltip: 'Open full view in a new window',
+        icon: const Icon(Icons.open_in_full),
+        onPressed:
+            widget.state.rendering ? null : () => openDetailView(widget.state.svg!),
+      ),
+    );
   }
 
   /// A small banner while parameters have changed but not been applied.
