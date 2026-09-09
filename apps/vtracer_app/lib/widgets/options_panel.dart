@@ -38,6 +38,14 @@ class OptionsPanel extends StatelessWidget {
             icon: const Icon(Icons.auto_awesome),
             label: const Text('Try a sample'),
           ),
+          const SizedBox(height: 8),
+          // Conversions are too heavy for live re-rendering while tuning, so
+          // parameter changes wait here until applied.
+          FilledButton.icon(
+            onPressed: state.needsApply ? state.apply : null,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: Text(state.rendering ? 'Rendering…' : 'Apply'),
+          ),
           const Divider(height: 32),
 
           _label(

@@ -45,6 +45,7 @@ class _CanvasAreaState extends State<CanvasArea> {
             child: state.hasImage ? _result(context) : _dropHint(context),
           ),
           if (state.rendering) _progressOverlay(context),
+          if (state.needsApply) _dirtyHint(context),
           if (state.error != null)
             Positioned(
               left: 0,
@@ -114,6 +115,25 @@ class _CanvasAreaState extends State<CanvasArea> {
               ),
       );
     });
+  }
+
+  /// A small banner while parameters have changed but not been applied.
+  Widget _dirtyHint(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Material(
+        color: Colors.indigo.shade700,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Parameters changed — press Apply to update the trace',
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _progressOverlay(BuildContext context) {

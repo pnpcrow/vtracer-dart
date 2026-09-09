@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:vtracer/vtracer.dart';
+import 'package:vtracer/worker.dart';
 
 /// Which pipeline options the UI exposes (mirrors the vtracer webapp).
 enum UiClustering { color, bw }
@@ -13,11 +15,15 @@ enum UiFitMode { pixel, polygon, spline }
 
 /// App state: the source image, the tuning parameters and the render loop.
 ///
-/// Slider changes re-render through a [Session], so tweaking curve parameters
-/// re-uses the cached segmentation; only clustering-relevant changes
-/// re-segment.
+/// Conversion runs on a [VtracerWorker] — a background isolate on desktop
+/// (so the UI isolate stays free), cooperatively on the UI isolate on the
+/// web (where isolates don't exist). Parameter changes mark the state dirty
+/// instead of re-rendering live: real-time conversion is too heavy for
+/// interactive tuning on larger images, so the user applies changes
+/// explicitly via [apply]. Loading an image auto-applies once, matching the
+/// open-and-trace flow.
 class AppState extends ChangeNotifier {
-  Session? _session;
+  VtracerWorker? _worker;
   ColorImage? _image;
 
   String? svg;
@@ -39,14 +45,15 @@ class AppState extends ChangeNotifier {
 
   // --- render state ---------------------------------------------------------
   bool rendering = false;
+
+  /// Parameters changed since the last render and await an [apply].
+  bool dirty = false;
+  bool get needsApply => dirty && hasImage && !rendering;
   String progressLabel = '';
   double progressFraction = 0;
   String? error;
   int shapeCount = 0;
   int renderMs = 0;
-
-  CancelToken? _activeCancel;
-  Timer? _debounce;
 
   VtracerConfig _config() {
     return VtracerConfig(
@@ -95,45 +102,42 @@ class AppState extends ChangeNotifier {
 
   Future<void> setImage(ColorImage image) async {
     _image = image;
-    _session = Session(image);
+    final oldWorker = _worker;
+    _worker = await startVtracerWorker(image);
+    unawaited(oldWorker?.dispose());
     svg = null;
     shapeCount = 0;
+    dirty = false;
     notifyListeners();
-    await render(immediate: true);
+    await render();
   }
 
-  void scheduleRender() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 150), () {
-      render(immediate: true);
-    });
+  /// Record an option change: the new value shows in the panel immediately,
+  /// but the (expensive) conversion only runs on the next [apply].
+  void update(void Function() mutate) {
+    mutate();
+    dirty = true;
+    notifyListeners();
   }
 
-  Future<void> render({bool immediate = false}) async {
-    final session = _session;
-    if (session == null) return;
+  /// Re-render with the current parameters.
+  Future<void> apply() => render();
 
-    _activeCancel?.cancel();
-    final cancel = CancelToken();
-    _activeCancel = cancel;
+  Future<void> render() async {
+    final worker = _worker;
+    if (worker == null || rendering) return;
 
     rendering = true;
+    dirty = false;
     error = null;
     progressLabel = 'Converting…';
     progressFraction = 0;
     notifyListeners();
 
     final sw = Stopwatch()..start();
-    // Throttle progress notifications: every clustering batch would otherwise
-    // rebuild (and re-commit semantics) dozens of times per second, which is
-    // both wasted work and a crash trigger for the engine's Windows
-    // accessibility bridge (see main.dart — ExcludeSemantics workaround).
-    final progressWatch = Stopwatch()..start();
-    var lastNotifiedFraction = -1.0;
     try {
-      final result = await session.renderSvgAsync(
+      final result = await worker.renderSvg(
         _config(),
-        cancel: cancel,
         onProgress: (p) {
           progressLabel = switch (p.phase) {
             Phase.segment => 'Clustering',
@@ -141,16 +145,9 @@ class AppState extends ChangeNotifier {
             Phase.optimize => 'Optimizing',
           };
           progressFraction = p.fraction;
-          final settled = (p.fraction - lastNotifiedFraction).abs() >= 0.05;
-          if (p.phase == Phase.segment &&
-              (settled || progressWatch.elapsedMilliseconds >= 100)) {
-            progressWatch.reset();
-            lastNotifiedFraction = p.fraction;
-            notifyListeners();
-          }
+          notifyListeners();
         },
       );
-      if (cancel.isCancelled) return;
       sw.stop();
       svg = result;
       renderMs = sw.elapsedMilliseconds;
@@ -160,18 +157,17 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = '$e';
     } finally {
-      if (!cancel.isCancelled) {
-        rendering = false;
-        progressFraction = 1;
-        notifyListeners();
-      }
+      rendering = false;
+      progressFraction = 1;
+      notifyListeners();
     }
   }
 
-  void update(void Function() mutate) {
-    mutate();
-    notifyListeners();
-    scheduleRender();
+  @override
+  void dispose() {
+    unawaited(_worker?.dispose());
+    _worker = null;
+    super.dispose();
   }
 
   /// The synthetic sample scene (gradient sky, sun, mountains).
