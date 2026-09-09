@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import '../color.dart';
@@ -104,7 +105,14 @@ class _BuilderImpl {
   final Uint8List pixels; // RGBA bytes
   List<ColorCluster> clusters;
   Uint32List clusterIndices;
-  List<_Area> clusterAreas = [];
+
+  /// Stage-2 bucket directory: area → the clusters currently at that area,
+  /// ordered by area. A sorted map (not a sorted list) keeps the mid-run
+  /// bucket inserts at O(log n) — the list-based variant shifted hundreds of
+  /// millions of elements on photo-sized inputs because every merge can
+  /// insert a bucket for the grown target's new area.
+  SplayTreeMap<int, _Area> clusterAreas = SplayTreeMap();
+
   List<int> clustersOutput = [];
   int stage = 1;
   int iteration = 0;
@@ -188,7 +196,10 @@ class _BuilderImpl {
       case 1:
         return 50 * iteration ~/ clusterIndices.length;
       case 2:
-        return 50 + 50 * iteration ~/ clusterAreas.length;
+        // `iteration` counts processed buckets; new buckets keep appearing
+        // while merges run, so the denominator is the live pending count.
+        final total = iteration + clusterAreas.length;
+        return total == 0 ? 100 : 50 + 50 * iteration ~/ total;
       default:
         return 100;
     }
@@ -203,6 +214,12 @@ class _BuilderImpl {
     final diag = diagonal;
 
     final end = (iteration + batchSize) > len ? len : (iteration + batchSize);
+
+    // `same` on raw channels; out-of-range never matches. Declared at batch
+    // scope so the pixel loop doesn't allocate a closure per pixel.
+    bool sameAt(int a, int b) => a >= 0 && b >= 0 && same(px[a], px[a + 1],
+        px[a + 2], px[b], px[b + 1], px[b + 2]);
+
     for (var i = iteration; i < end; i++) {
       final x = i % w;
       final y = i ~/ w;
@@ -219,10 +236,6 @@ class _BuilderImpl {
       var clusterLeft = x > 0 ? clusterIndices[i - 1] : zeroCluster;
       final clusterUpleft =
           (x > 0 && y > 0) ? clusterIndices[i - w - 1] : zeroCluster;
-
-      // `same` on raw channels; out-of-range never matches.
-      bool sameAt(int a, int b) => a >= 0 && b >= 0 && same(px[a], px[a + 1],
-          px[a + 2], px[b], px[b + 1], px[b + 2]);
 
       if (clusterLeft != clusterUp &&
           sameAt(leftIdx, upIdx) &&
@@ -294,6 +307,9 @@ class _BuilderImpl {
       c.residueSum = c.sum.clone();
     }
 
+    // Group by area in a hash map first: inserting only the distinct areas
+    // into the ordered map is much cheaper than one ordered insert per
+    // cluster (photo-sized inputs carry hundreds of thousands of them).
     final counts = <int, List<int>>{};
     for (var index = 0; index < clusters.length; index++) {
       final area = clusters[index].area;
@@ -301,38 +317,42 @@ class _BuilderImpl {
         counts.putIfAbsent(area, () => []).add(index);
       }
     }
-
-    clusterAreas = [
-      for (final e in counts.entries) _Area(e.key, e.value.length, e.value)
-    ]..sort((a, b) => a.area.compareTo(b.area));
+    for (final e in counts.entries) {
+      clusterAreas[e.key] = _Area(e.key, e.value.length, e.value);
+    }
   }
 
+  /// The stage-2 work unit: process the smallest unprocessed bucket. Merges
+  /// only ever append grown targets to strictly later buckets, so the
+  /// current bucket can be removed from the directory once processed and the
+  /// next-smallest key picked afresh on the following call.
   bool _stage2() {
     if (clusterAreas.isEmpty) {
       return true;
     }
-    if (clusterAreas[iteration].count == 0) {
+    final key = clusterAreas.firstKey()!;
+    final bucket = clusterAreas[key]!;
+    if (bucket.count == 0) {
+      clusterAreas.remove(key);
       iteration++;
-      if (iteration == clusterAreas.length) {
-        return true;
-      }
-      return false;
+      return clusterAreas.isEmpty;
     }
 
-    final curArea = clusterAreas[iteration].area;
+    final curArea = key;
     final canDiscardPixels =
         keyingAction == KeyingAction.discard && key != Color.zero();
 
     // Process this bucket's clusters in index order (merges may have appended
     // grown clusters to the list; sorting restores the scan order the
-    // reference implementation uses).
-    final bucket = clusterAreas[iteration].clusterList;
-    if (!bucket.isEmpty) {
-      final ordered = bucket;
+    // reference implementation uses). Appends triggered by the loop only
+    // touch strictly later buckets, so iterating by index is safe.
+    final ordered = bucket.clusterList;
+    if (!ordered.isEmpty) {
       if (!_isSorted(ordered)) {
         ordered.sort();
       }
-      for (final index in List<int>.from(ordered)) {
+      for (var bi = 0; bi < ordered.length; bi++) {
+        final index = ordered[bi];
         final mycluster = clusters[index];
 
         if (mycluster.area != curArea) {
@@ -354,7 +374,9 @@ class _BuilderImpl {
         }
 
         if (infos.isEmpty) {
-          if (iteration == clusterAreas.length - 1 || canDiscardPixels) {
+          // `firstKeyAfter(curArea) == null` ⟺ this is the last bucket right
+          // now (later buckets may still appear while merges run).
+          if (clusterAreas.lastKey() == curArea || canDiscardPixels) {
             // the final background, or an isolated cluster surrounded by keyed,
             // discarded pixels
             clustersOutput.add(index);
@@ -376,22 +398,28 @@ class _BuilderImpl {
           clustersOutput.add(index);
         }
 
-        final targetInAreas = _binarySearchArea(clusters[target].area);
-        clusterAreas[targetInAreas].count -= 1;
+        // The target's old bucket may already be past (processed buckets are
+        // removed); its count is only read before that point.
+        final oldBucket = clusterAreas[clusters[target].area];
+        if (oldBucket != null) {
+          oldBucket.count -= 1;
+        }
 
         _mergeClusterInto(index, target, isDeepen, isHollow);
         final updatedArea = clusters[target].area;
 
-        final pos = _binarySearchArea(updatedArea, exact: false);
-        clusterAreas[pos].count += 1;
         // The grown target joins the (strictly later) bucket for its new area.
-        clusterAreas[pos].clusterList.add(target);
+        final grown =
+            clusterAreas.putIfAbsent(updatedArea, () => _Area(updatedArea, 0, []));
+        grown.count += 1;
+        grown.clusterList.add(target);
       }
-      bucket.clear();
+      ordered.clear();
     }
 
+    clusterAreas.remove(key);
     iteration++;
-    return iteration == clusterAreas.length;
+    return clusterAreas.isEmpty;
   }
 
   static bool _isSorted(List<int> list) {
@@ -399,27 +427,6 @@ class _BuilderImpl {
       if (list[i - 1] > list[i]) return false;
     }
     return true;
-  }
-
-  /// Binary search over the sorted unique areas. With `exact: true`, the area
-  /// is guaranteed present. With `exact: false`, a miss inserts a fresh
-  /// bucket at the found position and returns it.
-  int _binarySearchArea(int area, {bool exact = true}) {
-    var lo = 0;
-    var hi = clusterAreas.length;
-    while (lo < hi) {
-      final mid = (lo + hi) >> 1;
-      if (clusterAreas[mid].area < area) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    if (lo < clusterAreas.length && clusterAreas[lo].area == area) {
-      return lo;
-    }
-    clusterAreas.insert(lo, _Area(area, 0, []));
-    return lo;
   }
 
   void _mergeClusterInto(int from, int to, bool isDeepen, bool isHollow) {
