@@ -39,6 +39,7 @@ export 'src/fitter.dart';
 export 'src/frontend/binary.dart';
 export 'src/frontend/color_cluster.dart';
 export 'src/frontend/frontend.dart';
+export 'src/frontend/keying.dart';
 export 'src/frontend/watershed.dart';
 export 'src/ir.dart';
 export 'src/mosaic/mosaic.dart';
