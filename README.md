@@ -30,6 +30,8 @@ packages/
   vtracer_cli/               # CLI front-end (image decoding via package:image)
 apps/
   vtracer_app/               # Flutter app (webapp interface) — Windows/macOS/Linux + Web
+  vtracer_android/           # Flutter app for Android — photo picker / share intents /
+                             #   permission-free Downloads saving
 ```
 
 ## The pipeline
@@ -135,6 +137,29 @@ flutter build windows
 flutter build web          # serve build/web with any static server
 ```
 
+## Android app (permission-free by design)
+
+`apps/vtracer_android` is a mobile-first build of the same interface on the
+same pure Dart pipeline. **The app requests no storage permission at all**:
+
+- **Import** — the gallery button goes through the system **photo picker**
+  (`image_picker`, Android 13+ photo picker with Play-services backport),
+  and the manifest registers `ACTION_VIEW` / `ACTION_SEND` handlers for
+  `image/*`, so VTracer appears in the system share sheet and "open with"
+  choosers; incoming images are traced automatically on arrival.
+- **Export** — "Save SVG" writes into the public **Downloads** directory
+  via `MediaStore.Downloads` (permission-free on the supported API range;
+  minSdk 29).
+
+```bash
+cd apps/vtracer_android
+
+flutter run                # on a connected device/emulator
+flutter build apk --release
+```
+
+See `apps/vtracer_android/README.md` for details.
+
 On desktop the conversion runs on a dedicated background isolate (see
 `package:vtracer/worker.dart`), leaving the UI isolate free; the cached
 segmentation stays on the worker across renders. On the web — where Dart
@@ -234,6 +259,7 @@ dart test       # run inside each package, or:
 (cd packages/visioncortex && dart test)   # 9 tests
 (cd packages/vtracer && dart test)        # 19 tests (pipeline + worker)
 (cd apps/vtracer_app && flutter test)     # app end-to-end tests
+(cd apps/vtracer_android && flutter test) # Android app tests
 ```
 
 ## Differences from upstream
