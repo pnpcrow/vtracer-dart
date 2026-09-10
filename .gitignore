@@ -13,6 +13,7 @@ build/
 # Compiled outputs
 *.exe
 bin/vtracer
+__pycache__/
 
 # Test artifacts
 testdata/*.svg
