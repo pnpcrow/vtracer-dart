@@ -77,6 +77,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get aiFallbackNote => 'Needle3를 사용할 수 없거나 판단을 포기해 내장 규칙으로 판단했습니다.';
+
+  @override
   String get aiEngineHeuristic => '내장 휴리스틱';
 
   @override
@@ -263,6 +266,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsTitle => '설정';
 
   @override
+  String get settingsAiEngine => 'AI 판단 엔진';
+
+  @override
+  String get settingsEngineEmbedded => '내장';
+
+  @override
+  String get settingsEngineEmbeddedDesc =>
+      '앱에 번들된 Needle3 모델이 이 컴퓨터에서 실행됩니다. 사용할 수 없으면 내장 규칙으로 자동 전환됩니다.';
+
+  @override
+  String get settingsEngineServe => '서버';
+
+  @override
+  String get settingsEngineServeDesc =>
+      '실행 중인 `needle --serve` 프로세스가 AI 자동 판단을 담당합니다.';
+
+  @override
+  String get settingsEngineHeuristic => '규칙';
+
+  @override
+  String get settingsEngineHeuristicDesc =>
+      '내장 규칙(오프라인)만으로 판단합니다. 모델을 사용하지 않습니다.';
+
+  @override
   String get settingsNeedle3 => 'Needle3 엔드포인트';
 
   @override
@@ -270,7 +297,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsNeedle3Desc =>
-      'AI 자동 모드가 판단에 사용할 `needle --serve` 서버 주소입니다. 비워 두면 내장 휴리스틱(오프라인)을 사용합니다.';
+      'AI 자동 모드가 판단에 사용할 `needle --serve` 서버 주소입니다.';
 
   @override
   String get settingsTheme => '테마';

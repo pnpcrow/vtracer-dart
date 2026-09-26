@@ -37,7 +37,8 @@
       "error": {"type": "String"}
     }
   },
-  "aiEngineHeuristic": "built-in heuristics",
+  "aiFallbackNote": "Needle3 was unavailable or declined to decide — the built-in rules decided instead.",
+    "aiEngineHeuristic": "built-in heuristics",
   "aiEngineNeedle3": "Needle3 model",
 
   "groupClustering": "Clustering",
@@ -136,6 +137,13 @@
   "progressPhaseOptimize": "Optimizing",
 
   "settingsTitle": "Settings",
+  "settingsAiEngine": "AI engine",
+  "settingsEngineEmbedded": "Bundled",
+  "settingsEngineEmbeddedDesc": "The Needle3 model bundled with the app runs on this machine. Falls back to the built-in rules when unavailable.",
+  "settingsEngineServe": "Server",
+  "settingsEngineServeDesc": "Uses a running `needle --serve` process for AI Auto decisions.",
+  "settingsEngineHeuristic": "Rules",
+  "settingsEngineHeuristicDesc": "Built-in offline rules decide; no model is used.",
   "settingsNeedle3": "Needle3 endpoint",
   "settingsNeedle3Hint": "http://127.0.0.1:8080/run",
   "settingsNeedle3Desc": "URL of a running `needle --serve` used by AI Auto for its decisions. Empty = built-in heuristics (offline).",

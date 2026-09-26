@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiSectionDesc.
   ///
   /// In en, this message translates to:
-  /// **'Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).'**
+  /// **'Analyzes the image features and picks the clustering and tuning parameters. The bundled Needle3 model decides on-device and falls back to built-in rules when unavailable.'**
   String get aiSectionDesc;
 
   /// No description provided for @aiGoalBalanced.
@@ -188,11 +188,23 @@ abstract class AppLocalizations {
   /// **'AI auto failed: {error}'**
   String aiFailed(String error);
 
+  /// No description provided for @aiFallbackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Needle3 was unavailable or declined to decide — the built-in rules decided instead.'**
+  String get aiFallbackNote;
+
   /// No description provided for @aiEngineHeuristic.
   ///
   /// In en, this message translates to:
-  /// **'built-in heuristics'**
+  /// **'built-in rules'**
   String get aiEngineHeuristic;
+
+  /// No description provided for @aiEngineNeedle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Needle3 model'**
+  String get aiEngineNeedle3;
 
   /// No description provided for @canvasEmptyTitle.
   ///

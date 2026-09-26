@@ -149,11 +149,11 @@ Future<VtracerConfig> buildConfigWithAi(ArgResults args, ColorImage image) async
   if (needle3 == null) {
     engine = HeuristicDecisionEngine();
   } else if (needle3.startsWith('http://') || needle3.startsWith('https://')) {
-    engine = Needle3DecisionEngine(
+    engine = Needle3CandidateEngine(
       runtime: Needle3HttpRuntime(Uri.parse(needle3)),
     );
   } else {
-    engine = Needle3DecisionEngine(
+    engine = Needle3CandidateEngine(
       runtime: Needle3ProcessRuntime(modelPath: needle3),
     );
   }

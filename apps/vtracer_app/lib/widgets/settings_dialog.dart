@@ -36,13 +36,44 @@ class SettingsDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.settingsNeedle3,
+              Text(l10n.settingsAiEngine,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(color: theme.colorScheme.primary)),
               const SizedBox(height: 8),
-              _Needle3Field(settings: settings),
+              SegmentedButton<AiEngineChoice>(
+                segments: [
+                  ButtonSegment(
+                    value: AiEngineChoice.embedded,
+                    label: Text(l10n.settingsEngineEmbedded),
+                    icon: const Icon(Icons.memory_outlined),
+                  ),
+                  ButtonSegment(
+                    value: AiEngineChoice.serve,
+                    label: Text(l10n.settingsEngineServe),
+                    icon: const Icon(Icons.dns_outlined),
+                  ),
+                  ButtonSegment(
+                    value: AiEngineChoice.heuristic,
+                    label: Text(l10n.settingsEngineHeuristic),
+                    icon: const Icon(Icons.rule_outlined),
+                  ),
+                ],
+                selected: {settings.aiEngine},
+                onSelectionChanged: (selection) =>
+                    settings.setAiEngine(selection.first),
+              ),
               const SizedBox(height: 6),
-              _HelperText(text: l10n.settingsNeedle3Desc),
+              _HelperText(
+                text: switch (settings.aiEngine) {
+                  AiEngineChoice.embedded => l10n.settingsEngineEmbeddedDesc,
+                  AiEngineChoice.serve => l10n.settingsEngineServeDesc,
+                  AiEngineChoice.heuristic => l10n.settingsEngineHeuristicDesc,
+                },
+              ),
+              if (settings.aiEngine == AiEngineChoice.serve) ...[
+                const SizedBox(height: 8),
+                _Needle3Field(settings: settings),
+              ],
               const SizedBox(height: 20),
               Text(l10n.settingsTheme,
                   style: theme.textTheme.titleSmall

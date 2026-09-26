@@ -10,7 +10,7 @@
   "optionsTitle": "변환 설정",
 
   "aiSection": "AI 자동",
-  "aiSectionDesc": "이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다(오프라인 휴리스틱).",
+  "aiSectionDesc": "이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다. 내장된 Needle3 모델이 기기에서 판단하며, 사용할 수 없으면 내장 규칙으로 전환됩니다.",
   "aiGoalBalanced": "균형",
   "aiGoalFaithful": "충실",
   "aiGoalCompact": "경량",
@@ -18,7 +18,9 @@
   "aiRunning": "분석 중…",
   "aiDecisionSummary": "{engine} · 신뢰도 {percent}% — {rationale}",
   "aiFailed": "AI 자동 분석 실패: {error}",
-  "aiEngineHeuristic": "내장 휴리스틱",
+  "aiFallbackNote": "Needle3를 사용할 수 없거나 판단을 포기해 내장 규칙으로 판단했습니다.",
+    "aiEngineHeuristic": "내장 규칙",
+  "aiEngineNeedle3": "Needle3 모델",
 
   "canvasEmptyTitle": "이미지가 없습니다",
   "canvasEmptyHint": "갤러리에서 사진을 고르거나, 다른 앱에서 이미지를 공유해 보세요.",

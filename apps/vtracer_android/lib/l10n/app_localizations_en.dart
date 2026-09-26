@@ -32,7 +32,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiSectionDesc =>
-      'Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).';
+      'Analyzes the image features and picks the clustering and tuning parameters. The bundled Needle3 model decides on-device and falls back to built-in rules when unavailable.';
 
   @override
   String get aiGoalBalanced => 'Balanced';
@@ -60,7 +60,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiEngineHeuristic => 'built-in heuristics';
+  String get aiFallbackNote =>
+      'Needle3 was unavailable or declined to decide — the built-in rules decided instead.';
+
+  @override
+  String get aiEngineHeuristic => 'built-in rules';
+
+  @override
+  String get aiEngineNeedle3 => 'Needle3 model';
 
   @override
   String get canvasEmptyTitle => 'No image yet';

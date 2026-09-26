@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 import 'package:vtracer/vtracer.dart';
 import 'package:vtracer/worker.dart';
 import 'package:vtracer_ai/vtracer_ai.dart';
+
+import 'intents.dart';
 
 /// Which pipeline options the UI exposes (mirrors the vtracer webapp).
 enum UiClustering { color, bw }
@@ -112,6 +117,9 @@ class AppState extends ChangeNotifier {
   VtracerWorker? _worker;
   ColorImage? _image;
 
+  /// Cached embedded Needle3 decision engine.
+  DecisionEngine? _embeddedNeedle3;
+
   /// Name of the source image (for save-file naming), when known.
   String? sourceName;
 
@@ -139,8 +147,13 @@ class AppState extends ChangeNotifier {
   // --- AI auto mode ---------------------------------------------------------
   TuningGoal aiGoal = TuningGoal.balanced;
   bool aiBusy = false;
+  String? aiEngineName;
   String? aiRationale;
   double? aiConfidence;
+
+  /// Why the built-in rules decided instead of the model ('unavailable' or
+  /// 'declined'); null when the model produced the decision.
+  String? aiNoteCode;
 
   // --- render state ---------------------------------------------------------
   bool rendering = false;
@@ -239,12 +252,13 @@ class AppState extends ChangeNotifier {
   /// Re-render with the current parameters.
   Future<void> apply() => render();
 
-  /// AI auto mode (offline heuristics): extract image features, decide the
-  /// parameter set, move the sheet controls onto it, and render.
+  /// AI auto mode: extract image features, ask the embedded Needle3 model
+  /// (bundled engine + model, runs on-device) for a parameter set, move the
+  /// sheet controls onto it, and render.
   ///
-  /// The Needle3 model path needs the Cactus C-API FFI binding on Android
-  /// (docs/ai_auto/needle3_integration.md §3.1); the heuristic engine is
-  /// pure Dart, so the feature works fully offline today.
+  /// Every model path falls back to the built-in heuristic rules: when the
+  /// engine is missing, errors out, or the model abstains, the rules decide
+  /// — the feature never fails outright.
   Future<void> applyAiAuto() async {
     final image = _image;
     if (image == null || aiBusy) return;
@@ -252,8 +266,19 @@ class AppState extends ChangeNotifier {
     aiBusy = true;
     notifyListeners();
     try {
-      final result = await AutoTuner.local()
-          .tune(image, goal: aiGoal, base: _config());
+      final embedded = await _embeddedEngineOrNull();
+      final engine = embedded ?? HeuristicDecisionEngine();
+      String? note = embedded == null ? 'unavailable' : null;
+
+      TuningResult result;
+      try {
+        result =
+            await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
+      } on Needle3Exception {
+        note ??= 'declined';
+        result = await AutoTuner(HeuristicDecisionEngine())
+            .tune(image, goal: aiGoal, base: _config());
+      }
       final d = result.decision;
 
       clustering = switch (d.clustering) {
@@ -277,8 +302,10 @@ class AppState extends ChangeNotifier {
       maxColors = d.maxColors;
       simplify = d.simplify;
 
+      aiEngineName = result.engineName;
       aiRationale = d.rationale;
       aiConfidence = d.confidence;
+      aiNoteCode = note;
       dirty = true;
       await render();
     } catch (e) {
@@ -286,6 +313,28 @@ class AppState extends ChangeNotifier {
     } finally {
       aiBusy = false;
       notifyListeners();
+    }
+  }
+
+  /// The embedded Needle3 engine: model extracted from assets, engine run
+  /// from the APK's native library directory. Null when unavailable.
+  Future<DecisionEngine?> _embeddedEngineOrNull() async {
+    final cached = _embeddedNeedle3;
+    if (cached != null) return cached;
+    try {
+      final libDir = await AndroidIntents.nativeLibraryDir();
+      if (libDir == null) return null;
+      final support = await getApplicationSupportDirectory();
+      final runtime = await Needle3BundleInstaller.install(
+        directory: '${support.path}${Platform.pathSeparator}needle3',
+        readAsset: (name) async =>
+            (await rootBundle.load('assets/needle3/$name')).buffer.asUint8List(),
+        enginePath: '$libDir${Platform.pathSeparator}libneedle.so',
+      );
+      _embeddedNeedle3 = Needle3CandidateEngine(runtime: runtime);
+      return _embeddedNeedle3;
+    } catch (_) {
+      return null;
     }
   }
 

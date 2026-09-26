@@ -78,6 +78,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get aiFallbackNote =>
+      'Needle3 was unavailable or declined to decide — the built-in rules decided instead.';
+
+  @override
   String get aiEngineHeuristic => 'built-in heuristics';
 
   @override
@@ -272,6 +276,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsAiEngine => 'AI engine';
+
+  @override
+  String get settingsEngineEmbedded => 'Bundled';
+
+  @override
+  String get settingsEngineEmbeddedDesc =>
+      'The Needle3 model bundled with the app runs on this machine. Falls back to the built-in rules when unavailable.';
+
+  @override
+  String get settingsEngineServe => 'Server';
+
+  @override
+  String get settingsEngineServeDesc =>
+      'Uses a running `needle --serve` process for AI Auto decisions.';
+
+  @override
+  String get settingsEngineHeuristic => 'Rules';
+
+  @override
+  String get settingsEngineHeuristicDesc =>
+      'Built-in offline rules decide; no model is used.';
 
   @override
   String get settingsNeedle3 => 'Needle3 endpoint';

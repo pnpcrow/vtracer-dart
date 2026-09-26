@@ -10,7 +10,7 @@
   "optionsTitle": "Trace options",
 
   "aiSection": "AI Auto",
-  "aiSectionDesc": "Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).",
+  "aiSectionDesc": "Analyzes the image features and picks the clustering and tuning parameters. The bundled Needle3 model decides on-device and falls back to built-in rules when unavailable.",
   "aiGoalBalanced": "Balanced",
   "aiGoalFaithful": "Faithful",
   "aiGoalCompact": "Compact",
@@ -30,7 +30,9 @@
       "error": {"type": "String"}
     }
   },
-  "aiEngineHeuristic": "built-in heuristics",
+  "aiFallbackNote": "Needle3 was unavailable or declined to decide — the built-in rules decided instead.",
+    "aiEngineHeuristic": "built-in rules",
+  "aiEngineNeedle3": "Needle3 model",
 
   "canvasEmptyTitle": "No image yet",
   "canvasEmptyHint": "Pick a photo from the gallery, or share an image from another app.",

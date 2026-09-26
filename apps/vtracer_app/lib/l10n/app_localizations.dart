@@ -224,6 +224,12 @@ abstract class AppLocalizations {
   /// **'AI auto failed: {error}'**
   String aiFailed(String error);
 
+  /// No description provided for @aiFallbackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Needle3 was unavailable or declined to decide — the built-in rules decided instead.'**
+  String get aiFallbackNote;
+
   /// No description provided for @aiEngineHeuristic.
   ///
   /// In en, this message translates to:
@@ -571,6 +577,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get settingsTitle;
+
+  /// No description provided for @settingsAiEngine.
+  ///
+  /// In en, this message translates to:
+  /// **'AI engine'**
+  String get settingsAiEngine;
+
+  /// No description provided for @settingsEngineEmbedded.
+  ///
+  /// In en, this message translates to:
+  /// **'Bundled'**
+  String get settingsEngineEmbedded;
+
+  /// No description provided for @settingsEngineEmbeddedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The Needle3 model bundled with the app runs on this machine. Falls back to the built-in rules when unavailable.'**
+  String get settingsEngineEmbeddedDesc;
+
+  /// No description provided for @settingsEngineServe.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get settingsEngineServe;
+
+  /// No description provided for @settingsEngineServeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses a running `needle --serve` process for AI Auto decisions.'**
+  String get settingsEngineServeDesc;
+
+  /// No description provided for @settingsEngineHeuristic.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
+  String get settingsEngineHeuristic;
+
+  /// No description provided for @settingsEngineHeuristicDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in offline rules decide; no model is used.'**
+  String get settingsEngineHeuristicDesc;
 
   /// No description provided for @settingsNeedle3.
   ///

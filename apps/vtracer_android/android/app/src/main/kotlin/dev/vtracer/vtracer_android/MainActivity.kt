@@ -48,6 +48,12 @@ class MainActivity : FlutterActivity() {
                     intent.setDataAndType(null, null)
                     result.success(payload)
                 }
+                "getNativeLibraryDir" -> {
+                    // Directory of the APK's bundled native libraries; the
+                    // embedded Needle3 engine lives here as libneedle.so
+                    // (executables may only be run from this directory).
+                    result.success(applicationInfo.nativeLibraryDir)
+                }
                 "saveSvgToDownloads" -> {
                     val bytes = call.argument<ByteArray>("bytes")
                     val fileName = call.argument<String>("fileName")

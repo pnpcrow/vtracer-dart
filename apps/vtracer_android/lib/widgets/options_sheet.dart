@@ -107,12 +107,28 @@ class OptionsSheet extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           l10n.aiDecisionSummary(
-                            l10n.aiEngineHeuristic,
+                            state.aiEngineName == 'needle3'
+                                ? l10n.aiEngineNeedle3
+                                : l10n.aiEngineHeuristic,
                             ((state.aiConfidence ?? 0) * 100).round(),
                             state.aiRationale!,
                           ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        if (state.aiNoteCode != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.aiFallbackNote,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                    fontStyle: FontStyle.italic,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline),
+                          ),
+                        ],
                       ],
                       const SizedBox(height: 16),
                       Text(

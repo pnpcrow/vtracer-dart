@@ -93,7 +93,8 @@ class OptionsPanel extends StatelessWidget {
             excludeFromSemantics: state.hasImage,
             child: FilledButton.tonalIcon(
               onPressed: state.hasImage && !state.aiBusy && !state.rendering
-                  ? () => state.applyAiAuto(settings.needle3Endpoint)
+                  ? () => state.applyAiAuto(
+                      settings.aiEngine, settings.needle3Endpoint)
                   : null,
               icon: state.aiBusy
                   ? const SizedBox(
@@ -117,6 +118,15 @@ class OptionsPanel extends StatelessWidget {
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
+            if (state.aiNoteCode != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                l10n.aiFallbackNote,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic),
+              ),
+            ],
           ],
           const Divider(height: 32),
 

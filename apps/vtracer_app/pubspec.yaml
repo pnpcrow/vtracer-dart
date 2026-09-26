@@ -44,6 +44,7 @@ dependencies:
   web: ^1.1.1
   window_manager: ^0.5.2
   shared_preferences: ^2.5.5
+  path_provider: ^2.1.5
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
@@ -71,6 +72,12 @@ flutter:
   uses-material-design: true
 
   generate: true
+
+  # The embedded Needle3 decision engine: model + engine executable are
+  # extracted from assets on first use (vtracer_ai's Needle3BundleInstaller).
+  assets:
+    - assets/needle3/needle3.cact
+    - assets/needle3/needle.exe
 
   # To add assets to your application, add an assets section, like this:
   # assets:

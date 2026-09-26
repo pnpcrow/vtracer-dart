@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 import 'package:vtracer/vtracer.dart';
 import 'package:vtracer/worker.dart';
 import 'package:vtracer_ai/vtracer_ai.dart';
+
+import 'settings.dart';
 
 /// Which pipeline options the UI exposes (mirrors the vtracer webapp).
 enum UiClustering { color, bw }
@@ -95,6 +100,9 @@ class AppState extends ChangeNotifier {
   VtracerWorker? _worker;
   ColorImage? _image;
 
+  /// Cached embedded Needle3 runtime (engine + model extracted once).
+  Needle3Runtime? _embeddedNeedle3;
+
   String? svg;
   bool get hasImage => _image != null;
   int get imageWidth => _image?.width ?? 0;
@@ -123,6 +131,10 @@ class AppState extends ChangeNotifier {
   String? aiEngineName;
   String? aiRationale;
   double? aiConfidence;
+
+  /// Why the built-in rules decided instead of the model ('unavailable' or
+  /// 'declined'); null when the model produced the decision.
+  String? aiNoteCode;
 
   // --- render state ---------------------------------------------------------
   bool rendering = false;
@@ -220,27 +232,59 @@ class AppState extends ChangeNotifier {
   /// Re-render with the current parameters.
   Future<void> apply() => render();
 
-  /// AI auto mode: extract image features, ask the decision engine (built-in
-  /// heuristics, or a Needle3 model when `needle3Endpoint` is configured)
-  /// for a parameter set, move the panel fields onto it, and render.
+  /// AI auto mode: extract image features, ask the selected engine for a
+  /// parameter set, move the panel fields onto it, and render.
   ///
-  /// The decision is validated and clamped inside [AutoTuner], so the panel
-  /// sliders always receive in-range values.
-  Future<void> applyAiAuto(String needle3Endpoint) async {
+  /// [AiEngineChoice.embedded] runs the Needle3 model bundled with the app
+  /// (engine + model are extracted from assets on first use) with the
+  /// compact prompt profile the tiny base model requires. Every model path
+  /// falls back to the built-in heuristic rules when the model is missing,
+  /// errors out, or abstains.
+  Future<void> applyAiAuto(AiEngineChoice choice, String serveEndpoint) async {
     final image = _image;
     if (image == null || aiBusy) return;
 
     aiBusy = true;
     notifyListeners();
     try {
-      final endpoint = needle3Endpoint.trim();
-      final engine = endpoint.isEmpty
-          ? HeuristicDecisionEngine() as DecisionEngine
-          : Needle3DecisionEngine(
-              runtime: Needle3HttpRuntime(Uri.parse(endpoint)),
-            );
-      final result =
-          await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
+      DecisionEngine engine;
+      String? note;
+      switch (choice) {
+        case AiEngineChoice.heuristic:
+          engine = HeuristicDecisionEngine();
+        case AiEngineChoice.serve:
+          final url = serveEndpoint.trim();
+          if (url.isEmpty) {
+            engine = HeuristicDecisionEngine();
+            note = 'unavailable';
+          } else {
+            engine = Needle3CandidateEngine(
+                runtime: Needle3HttpRuntime(Uri.parse(url)));
+          }
+        case AiEngineChoice.embedded:
+          final runtime = await _embeddedNeedle3Runtime();
+          if (runtime == null) {
+            engine = HeuristicDecisionEngine();
+            note = 'unavailable';
+          } else {
+            // Chooser design: the base model picks between heuristic
+            // candidate profiles — the only prompt shape it reliably
+            // dispatches.
+            engine = Needle3CandidateEngine(runtime: runtime);
+          }
+      }
+
+      TuningResult result;
+      try {
+        result =
+            await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
+      } on Needle3Exception {
+        // The model could not be used (runtime error, abstention or an
+        // invalid choice) — the built-in heuristics take over.
+        note ??= 'declined';
+        result = await AutoTuner(HeuristicDecisionEngine())
+            .tune(image, goal: aiGoal, base: _config());
+      }
       final d = result.decision;
 
       clustering = switch (d.clustering) {
@@ -267,6 +311,7 @@ class AppState extends ChangeNotifier {
       aiEngineName = result.engineName;
       aiRationale = d.rationale;
       aiConfidence = d.confidence;
+      aiNoteCode = note;
       dirty = true;
       await render();
     } catch (e) {
@@ -274,6 +319,29 @@ class AppState extends ChangeNotifier {
     } finally {
       aiBusy = false;
       notifyListeners();
+    }
+  }
+
+  /// The bundled Needle3 runtime: engine + model extracted from package
+  /// assets into the app-support directory on first use. Windows only (the
+  /// bundle ships the Windows engine); null when unavailable.
+  Future<Needle3Runtime?> _embeddedNeedle3Runtime() async {
+    if (kIsWeb || !Platform.isWindows) return null;
+    final cached = _embeddedNeedle3;
+    if (cached != null) return cached;
+    try {
+      final support = await getApplicationSupportDirectory();
+      final runtime = await Needle3BundleInstaller.install(
+        directory: '${support.path}${Platform.pathSeparator}needle3',
+        readAsset: (name) async =>
+            (await rootBundle.load('assets/needle3/$name')).buffer.asUint8List(),
+        engineAssetName: 'needle.exe',
+        engineFileName: 'needle.exe',
+      );
+      _embeddedNeedle3 = runtime;
+      return runtime;
+    } catch (_) {
+      return null;
     }
   }
 

@@ -41,9 +41,18 @@ class AndroidIntents {
     });
   }
 
+  /// Directory holding the APK's bundled native libraries — the embedded
+  /// Needle3 engine lives here as `libneedle.so`. Null when unavailable.
+  static Future<String?> nativeLibraryDir() async {
+    try {
+      return await _channel.invokeMethod<String>('getNativeLibraryDir');
+    } on PlatformException {
+      return null;
+    }
+  }
+
   /// Pulls the payload the activity was started with (cold start), if any.
-  static Future<IncomingImage?> getInitialImage() async {
-    _ensureHandler();
+  static Future<IncomingImage?> getInitialImage() async {    _ensureHandler();
     try {
       return _imageFrom(await _channel.invokeMethod<Object?>('getInitialImage'));
     } on PlatformException {

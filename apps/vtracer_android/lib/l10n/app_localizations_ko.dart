@@ -32,7 +32,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiSectionDesc =>
-      '이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다(오프라인 휴리스틱).';
+      '이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다. 내장된 Needle3 모델이 기기에서 판단하며, 사용할 수 없으면 내장 규칙으로 전환됩니다.';
 
   @override
   String get aiGoalBalanced => '균형';
@@ -60,7 +60,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiEngineHeuristic => '내장 휴리스틱';
+  String get aiFallbackNote => 'Needle3를 사용할 수 없거나 판단을 포기해 내장 규칙으로 판단했습니다.';
+
+  @override
+  String get aiEngineHeuristic => '내장 규칙';
+
+  @override
+  String get aiEngineNeedle3 => 'Needle3 모델';
 
   @override
   String get canvasEmptyTitle => '이미지가 없습니다';

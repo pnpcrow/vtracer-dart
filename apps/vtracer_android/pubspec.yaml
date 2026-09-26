@@ -18,6 +18,7 @@ dependencies:
   flutter_svg: ^2.3.0
   image_picker: ^1.2.1
   shared_preferences: ^2.5.5
+  path_provider: ^2.1.5
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
@@ -32,5 +33,10 @@ flutter:
   uses-material-design: true
 
   generate: true
+
+  # The embedded Needle3 decision model, extracted from assets on first use
+  # (the engine executable ships in jniLibs as libneedle.so).
+  assets:
+    - assets/needle3/needle3.cact
 
 resolution: workspace
