@@ -36,6 +36,14 @@ class SettingsDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(l10n.settingsNeedle3,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: theme.colorScheme.primary)),
+              const SizedBox(height: 8),
+              _Needle3Field(settings: settings),
+              const SizedBox(height: 6),
+              _HelperText(text: l10n.settingsNeedle3Desc),
+              const SizedBox(height: 20),
               Text(l10n.settingsTheme,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(color: theme.colorScheme.primary)),
@@ -110,6 +118,48 @@ class SettingsDialog extends StatelessWidget {
           child: Text(l10n.settingsClose),
         ),
       ],
+    );
+  }
+}
+
+/// The editable Needle3 serve endpoint; commits on submit (Enter / focus
+/// loss) so typing does not spam preference writes.
+class _Needle3Field extends StatefulWidget {
+  final SettingsController settings;
+
+  const _Needle3Field({required this.settings});
+
+  @override
+  State<_Needle3Field> createState() => _Needle3FieldState();
+}
+
+class _Needle3FieldState extends State<_Needle3Field> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.settings.needle3Endpoint);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        isDense: true,
+        border: const OutlineInputBorder(),
+        hintText: l10n.settingsNeedle3Hint,
+      ),
+      onSubmitted: (value) => widget.settings.setNeedle3Endpoint(value),
+      onTapOutside: (_) {
+        if (_controller.text != widget.settings.needle3Endpoint) {
+          widget.settings.setNeedle3Endpoint(_controller.text);
+        }
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
     );
   }
 }

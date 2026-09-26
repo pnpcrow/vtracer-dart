@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: Row(
                     children: [
-                      OptionsPanel(state: _state),
+                      OptionsPanel(state: _state, settings: widget.settings),
                       const VerticalDivider(width: 1),
                       Expanded(child: CanvasArea(state: _state)),
                     ],

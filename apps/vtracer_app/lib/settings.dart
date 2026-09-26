@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// User-facing preferences: theme mode and locale override.
+/// User-facing preferences: theme mode, locale override, and the Needle3
+/// endpoint used by the AI auto mode.
 ///
-/// Both default to following the OS; a persisted choice survives restarts.
-/// The detail sub-window loads the same preferences for consistent
+/// Theme and locale default to following the OS; a persisted choice survives
+/// restarts. The detail sub-window loads the same preferences for consistent
 /// theming/language across windows.
 class SettingsController extends ChangeNotifier {
-  SettingsController._(this._prefs, this.themeMode, this.localeOverride);
+  SettingsController._(this._prefs, this.themeMode, this.localeOverride,
+      this.needle3Endpoint);
 
   static const _themeKey = 'settings.themeMode';
   static const _localeKey = 'settings.locale';
+  static const _needle3Key = 'settings.needle3Endpoint';
 
   final SharedPreferences _prefs;
 
@@ -18,6 +21,10 @@ class SettingsController extends ChangeNotifier {
 
   /// null = follow the system locale.
   Locale? localeOverride;
+
+  /// Endpoint of a `needle --serve` process for AI auto decisions; empty =
+  /// use the built-in offline heuristics.
+  String needle3Endpoint;
 
   /// Loads the persisted preferences (system defaults when unset).
   static Future<SettingsController> load() async {
@@ -33,6 +40,7 @@ class SettingsController extends ChangeNotifier {
       localeName == null || localeName == 'system'
           ? null
           : Locale(localeName),
+      prefs.getString(_needle3Key) ?? '',
     );
   }
 
@@ -51,5 +59,13 @@ class SettingsController extends ChangeNotifier {
       _localeKey,
       locale?.languageCode ?? 'system',
     );
+  }
+
+  Future<void> setNeedle3Endpoint(String value) async {
+    final endpoint = value.trim();
+    if (endpoint == needle3Endpoint) return;
+    needle3Endpoint = endpoint;
+    notifyListeners();
+    await _prefs.setString(_needle3Key, endpoint);
   }
 }

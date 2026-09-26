@@ -1,0 +1,22 @@
+name: vtracer_ai
+description: >-
+  AI-assisted parameter tuning for the vtracer raster-to-vector pipeline:
+  image feature extraction, decision templates, a deterministic heuristic
+  engine, and a Needle3 (Cactus Compute) decision engine for on-device
+  function-calling models.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  vtracer:
+    path: ../vtracer
+  visioncortex:
+    path: ../visioncortex
+
+dev_dependencies:
+  test: ^1.25.0
+
+resolution: workspace

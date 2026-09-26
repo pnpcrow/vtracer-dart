@@ -134,6 +134,66 @@ abstract class AppLocalizations {
   /// **'Trace options'**
   String get optionsTitle;
 
+  /// No description provided for @aiSection.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Auto'**
+  String get aiSection;
+
+  /// No description provided for @aiSectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).'**
+  String get aiSectionDesc;
+
+  /// No description provided for @aiGoalBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get aiGoalBalanced;
+
+  /// No description provided for @aiGoalFaithful.
+  ///
+  /// In en, this message translates to:
+  /// **'Faithful'**
+  String get aiGoalFaithful;
+
+  /// No description provided for @aiGoalCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get aiGoalCompact;
+
+  /// No description provided for @aiRunButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze & apply'**
+  String get aiRunButton;
+
+  /// No description provided for @aiRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing…'**
+  String get aiRunning;
+
+  /// No description provided for @aiDecisionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{engine} · confidence {percent}% — {rationale}'**
+  String aiDecisionSummary(String engine, int percent, String rationale);
+
+  /// No description provided for @aiFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI auto failed: {error}'**
+  String aiFailed(String error);
+
+  /// No description provided for @aiEngineHeuristic.
+  ///
+  /// In en, this message translates to:
+  /// **'built-in heuristics'**
+  String get aiEngineHeuristic;
+
   /// No description provided for @canvasEmptyTitle.
   ///
   /// In en, this message translates to:

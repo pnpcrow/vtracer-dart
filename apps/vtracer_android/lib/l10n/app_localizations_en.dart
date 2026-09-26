@@ -28,6 +28,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get optionsTitle => 'Trace options';
 
   @override
+  String get aiSection => 'AI Auto';
+
+  @override
+  String get aiSectionDesc =>
+      'Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).';
+
+  @override
+  String get aiGoalBalanced => 'Balanced';
+
+  @override
+  String get aiGoalFaithful => 'Faithful';
+
+  @override
+  String get aiGoalCompact => 'Compact';
+
+  @override
+  String get aiRunButton => 'Analyze & apply';
+
+  @override
+  String get aiRunning => 'Analyzing…';
+
+  @override
+  String aiDecisionSummary(String engine, int percent, String rationale) {
+    return '$engine · confidence $percent% — $rationale';
+  }
+
+  @override
+  String aiFailed(String error) {
+    return 'AI auto failed: $error';
+  }
+
+  @override
+  String get aiEngineHeuristic => 'built-in heuristics';
+
+  @override
   String get canvasEmptyTitle => 'No image yet';
 
   @override

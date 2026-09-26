@@ -43,6 +43,46 @@ class AppLocalizationsKo extends AppLocalizations {
   String get panelRendering => '변환 중…';
 
   @override
+  String get aiSection => 'AI 자동';
+
+  @override
+  String get aiSectionDesc => '이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다.';
+
+  @override
+  String get aiGoalBalanced => '균형';
+
+  @override
+  String get aiGoalFaithful => '충실';
+
+  @override
+  String get aiGoalCompact => '경량';
+
+  @override
+  String get aiRunButton => '분석 후 적용';
+
+  @override
+  String get aiRunning => '분석 중…';
+
+  @override
+  String get aiNeedsImageTooltip => '먼저 이미지를 불러오세요';
+
+  @override
+  String aiDecisionSummary(String engine, int percent, String rationale) {
+    return '$engine · 신뢰도 $percent% — $rationale';
+  }
+
+  @override
+  String aiFailed(String error) {
+    return 'AI 자동 분석 실패: $error';
+  }
+
+  @override
+  String get aiEngineHeuristic => '내장 휴리스틱';
+
+  @override
+  String get aiEngineNeedle3 => 'Needle3 모델';
+
+  @override
   String get groupClustering => '클러스터링';
 
   @override
@@ -221,6 +261,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsTitle => '설정';
+
+  @override
+  String get settingsNeedle3 => 'Needle3 엔드포인트';
+
+  @override
+  String get settingsNeedle3Hint => 'http://127.0.0.1:8080/run';
+
+  @override
+  String get settingsNeedle3Desc =>
+      'AI 자동 모드가 판단에 사용할 `needle --serve` 서버 주소입니다. 비워 두면 내장 휴리스틱(오프라인)을 사용합니다.';
 
   @override
   String get settingsTheme => '테마';

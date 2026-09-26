@@ -4,11 +4,12 @@ import 'dart:typed_data';
 import 'package:args/args.dart';
 import 'package:image/image.dart' as img;
 import 'package:vtracer/vtracer.dart';
+import 'package:vtracer_ai/vtracer_ai.dart';
 
 const String version = '1.0.0-alpha.4';
 
 /// Convert an image into vector graphics (Pure Dart port of vtracer-cli).
-void main(List<String> arguments) {
+Future<void> main(List<String> arguments) async {
   final parser = ArgParser(usageLineLength: 100);
 
   parser.addOption('input', abbr: 'i', valueHelp: 'INPUT',
@@ -16,8 +17,20 @@ void main(List<String> arguments) {
   parser.addOption('output', abbr: 'o', valueHelp: 'OUTPUT',
       help: 'Path to the output SVG.');
   parser.addOption('preset',
-      help: 'Start from a preset: bw, poster, photo.',
-      allowed: ['bw', 'poster', 'photo']);
+      help: 'Start from a preset: bw, poster, photo, or ai (auto-tunes the\n'
+          'parameters from image features; see also --ai-goal and --needle3).',
+      allowed: ['bw', 'poster', 'photo', 'ai']);
+  parser.addOption('ai-goal',
+      help: 'With --preset ai: what to optimize for.',
+      allowed: ['balanced', 'faithful', 'compact'],
+      defaultsTo: 'balanced');
+  parser.addOption('needle3',
+      valueHelp: 'TARGET',
+      help: 'With --preset ai: use a Needle3 model for the decision instead\n'
+          'of the built-in heuristics. Accepts an HTTP endpoint (a running\n'
+          '`needle --serve`, e.g. http://127.0.0.1:8080/run) or a local\n'
+          '.cact model file (run through the needle CLI). Falls back to\n'
+          'the heuristics when the model call fails.');
   parser.addOption('clustering',
       help: 'Region forming: color-cluster (default), bw, or watershed.',
       allowed: ['color-cluster', 'colorcluster', 'color', 'binary', 'bw', 'watershed']);
@@ -110,8 +123,8 @@ void main(List<String> arguments) {
   }
 
   try {
-    final config = buildConfig(args);
     final image = readImage(input);
+    final config = await buildConfigWithAi(args, image);
     final svg = config.build().toSvg(image);
     File(output).writeAsStringSync(svg);
     stdout.writeln('Conversion successful.');
@@ -122,6 +135,38 @@ void main(List<String> arguments) {
     stderr.writeln('Conversion failed: $e');
     exitCode = 1;
   }
+}
+
+/// Entry point of config building: resolves `--preset ai` (feature
+/// extraction + decision engine) before the plain flag mapping runs.
+Future<VtracerConfig> buildConfigWithAi(ArgResults args, ColorImage image) async {
+  final preset = args['preset'] as String?;
+  if (preset != 'ai') return buildConfig(args);
+
+  final goal = TuningGoal.parse(args['ai-goal'] as String? ?? 'balanced');
+  final DecisionEngine engine;
+  final needle3 = args['needle3'] as String?;
+  if (needle3 == null) {
+    engine = HeuristicDecisionEngine();
+  } else if (needle3.startsWith('http://') || needle3.startsWith('https://')) {
+    engine = Needle3DecisionEngine(
+      runtime: Needle3HttpRuntime(Uri.parse(needle3)),
+    );
+  } else {
+    engine = Needle3DecisionEngine(
+      runtime: Needle3ProcessRuntime(modelPath: needle3),
+    );
+  }
+
+  final result = await AutoTuner(engine).tune(image, goal: goal);
+  final d = result.decision;
+  final fallbackNote = d.source == DecisionSource.needle3Repaired
+      ? ' (repaired by heuristics)'
+      : '';
+  stdout.writeln('AI auto [${goal.name}] engine=${result.engineName}$fallbackNote');
+  stdout.writeln('  ${d.toSummary()}');
+  if (d.rationale.isNotEmpty) stdout.writeln('  rationale: ${d.rationale}');
+  return result.config;
 }
 
 VtracerConfig buildConfig(ArgResults args) {

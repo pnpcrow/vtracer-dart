@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vtracer_ai/vtracer_ai.dart';
 
 import '../controller.dart';
 import '../l10n/app_localizations.dart';
@@ -56,6 +57,64 @@ class OptionsSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
+                      Text(
+                        l10n.aiSection,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        l10n.aiSectionDesc,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<TuningGoal>(
+                        segments: [
+                          ButtonSegment(
+                            value: TuningGoal.balanced,
+                            label: Text(l10n.aiGoalBalanced),
+                          ),
+                          ButtonSegment(
+                            value: TuningGoal.faithful,
+                            label: Text(l10n.aiGoalFaithful),
+                          ),
+                          ButtonSegment(
+                            value: TuningGoal.compact,
+                            label: Text(l10n.aiGoalCompact),
+                          ),
+                        ],
+                        selected: {state.aiGoal},
+                        onSelectionChanged: (s) =>
+                            state.update(() => state.aiGoal = s.first),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          onPressed: state.hasImage && !state.aiBusy
+                              ? state.applyAiAuto
+                              : null,
+                          icon: state.aiBusy
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.auto_fix_high),
+                          label: Text(
+                              state.aiBusy ? l10n.aiRunning : l10n.aiRunButton),
+                        ),
+                      ),
+                      if (state.aiRationale != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.aiDecisionSummary(
+                            l10n.aiEngineHeuristic,
+                            ((state.aiConfidence ?? 0) * 100).round(),
+                            state.aiRationale!,
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                      const SizedBox(height: 16),
                       Text(
                         l10n.groupClustering,
                         style: Theme.of(context).textTheme.titleMedium,

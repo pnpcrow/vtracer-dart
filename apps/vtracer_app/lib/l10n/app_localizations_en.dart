@@ -43,6 +43,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panelRendering => 'Rendering…';
 
   @override
+  String get aiSection => 'AI Auto';
+
+  @override
+  String get aiSectionDesc =>
+      'Analyzes the image features and picks the clustering and tuning parameters for you.';
+
+  @override
+  String get aiGoalBalanced => 'Balanced';
+
+  @override
+  String get aiGoalFaithful => 'Faithful';
+
+  @override
+  String get aiGoalCompact => 'Compact';
+
+  @override
+  String get aiRunButton => 'Analyze & apply';
+
+  @override
+  String get aiRunning => 'Analyzing…';
+
+  @override
+  String get aiNeedsImageTooltip => 'Load an image first';
+
+  @override
+  String aiDecisionSummary(String engine, int percent, String rationale) {
+    return '$engine · confidence $percent% — $rationale';
+  }
+
+  @override
+  String aiFailed(String error) {
+    return 'AI auto failed: $error';
+  }
+
+  @override
+  String get aiEngineHeuristic => 'built-in heuristics';
+
+  @override
+  String get aiEngineNeedle3 => 'Needle3 model';
+
+  @override
   String get groupClustering => 'Clustering';
 
   @override
@@ -231,6 +272,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsNeedle3 => 'Needle3 endpoint';
+
+  @override
+  String get settingsNeedle3Hint => 'http://127.0.0.1:8080/run';
+
+  @override
+  String get settingsNeedle3Desc =>
+      'URL of a running `needle --serve` used by AI Auto for its decisions. Empty = built-in heuristics (offline).';
 
   @override
   String get settingsTheme => 'Theme';

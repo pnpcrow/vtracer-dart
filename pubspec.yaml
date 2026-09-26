@@ -7,6 +7,7 @@ environment:
 workspace:
   - packages/visioncortex
   - packages/vtracer
+  - packages/vtracer_ai
   - packages/vtracer_cli
   - apps/vtracer_app
   - apps/vtracer_android

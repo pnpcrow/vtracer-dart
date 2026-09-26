@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:vtracer/vtracer.dart';
 import 'package:vtracer/worker.dart';
+import 'package:vtracer_ai/vtracer_ai.dart';
 
 /// Which pipeline options the UI exposes (mirrors the vtracer webapp).
 enum UiClustering { color, bw }
@@ -130,6 +131,17 @@ class AppState extends ChangeNotifier {
   double lengthThreshold = 4.0;
   int spliceThreshold = 45;
 
+  /// Extra tuning targets the sheet has no slider for; usually null, set by
+  /// the AI auto mode when its decision uses them.
+  int? maxColors;
+  double? simplify;
+
+  // --- AI auto mode ---------------------------------------------------------
+  TuningGoal aiGoal = TuningGoal.balanced;
+  bool aiBusy = false;
+  String? aiRationale;
+  double? aiConfidence;
+
   // --- render state ---------------------------------------------------------
   bool rendering = false;
 
@@ -167,6 +179,8 @@ class AppState extends ChangeNotifier {
       cornerThreshold: cornerThreshold,
       lengthThreshold: lengthThreshold,
       spliceThreshold: spliceThreshold,
+      maxColors: maxColors,
+      simplify: simplify,
     );
   }
 
@@ -224,6 +238,56 @@ class AppState extends ChangeNotifier {
 
   /// Re-render with the current parameters.
   Future<void> apply() => render();
+
+  /// AI auto mode (offline heuristics): extract image features, decide the
+  /// parameter set, move the sheet controls onto it, and render.
+  ///
+  /// The Needle3 model path needs the Cactus C-API FFI binding on Android
+  /// (docs/ai_auto/needle3_integration.md §3.1); the heuristic engine is
+  /// pure Dart, so the feature works fully offline today.
+  Future<void> applyAiAuto() async {
+    final image = _image;
+    if (image == null || aiBusy) return;
+
+    aiBusy = true;
+    notifyListeners();
+    try {
+      final result = await AutoTuner.local()
+          .tune(image, goal: aiGoal, base: _config());
+      final d = result.decision;
+
+      clustering = switch (d.clustering) {
+        Clustering.binary => UiClustering.bw,
+        _ => UiClustering.color,
+      };
+      hierarchical = d.hierarchical == Hierarchical.cutout
+          ? UiHierarchical.cutout
+          : UiHierarchical.stacked;
+      mode = switch (d.fitMode) {
+        FitMode.pixel => UiFitMode.pixel,
+        FitMode.polygon => UiFitMode.polygon,
+        FitMode.spline => UiFitMode.spline,
+      };
+      filterSpeckle = d.filterSpeckle;
+      colorPrecision = d.colorPrecision;
+      layerDifference = d.layerDifference;
+      cornerThreshold = d.cornerThreshold;
+      lengthThreshold = d.lengthThreshold;
+      spliceThreshold = d.spliceThreshold;
+      maxColors = d.maxColors;
+      simplify = d.simplify;
+
+      aiRationale = d.rationale;
+      aiConfidence = d.confidence;
+      dirty = true;
+      await render();
+    } catch (e) {
+      error = '$e';
+    } finally {
+      aiBusy = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> render() async {
     final worker = _worker;

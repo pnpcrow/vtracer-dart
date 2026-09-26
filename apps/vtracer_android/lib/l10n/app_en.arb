@@ -9,6 +9,29 @@
   "saveSvg": "Save SVG",
   "optionsTitle": "Trace options",
 
+  "aiSection": "AI Auto",
+  "aiSectionDesc": "Analyzes the image features and picks the clustering and tuning parameters for you (offline heuristics).",
+  "aiGoalBalanced": "Balanced",
+  "aiGoalFaithful": "Faithful",
+  "aiGoalCompact": "Compact",
+  "aiRunButton": "Analyze & apply",
+  "aiRunning": "Analyzing…",
+  "aiDecisionSummary": "{engine} · confidence {percent}% — {rationale}",
+  "@aiDecisionSummary": {
+    "placeholders": {
+      "engine": {"type": "String"},
+      "percent": {"type": "int"},
+      "rationale": {"type": "String"}
+    }
+  },
+  "aiFailed": "AI auto failed: {error}",
+  "@aiFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "aiEngineHeuristic": "built-in heuristics",
+
   "canvasEmptyTitle": "No image yet",
   "canvasEmptyHint": "Pick a photo from the gallery, or share an image from another app.",
 

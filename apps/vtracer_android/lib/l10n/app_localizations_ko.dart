@@ -28,6 +28,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get optionsTitle => '변환 설정';
 
   @override
+  String get aiSection => 'AI 자동';
+
+  @override
+  String get aiSectionDesc =>
+      '이미지 특징을 분석해 클러스터링 방식과 세부 파라미터를 자동으로 고릅니다(오프라인 휴리스틱).';
+
+  @override
+  String get aiGoalBalanced => '균형';
+
+  @override
+  String get aiGoalFaithful => '충실';
+
+  @override
+  String get aiGoalCompact => '경량';
+
+  @override
+  String get aiRunButton => '분석 후 적용';
+
+  @override
+  String get aiRunning => '분석 중…';
+
+  @override
+  String aiDecisionSummary(String engine, int percent, String rationale) {
+    return '$engine · 신뢰도 $percent% — $rationale';
+  }
+
+  @override
+  String aiFailed(String error) {
+    return 'AI 자동 분석 실패: $error';
+  }
+
+  @override
+  String get aiEngineHeuristic => '내장 휴리스틱';
+
+  @override
   String get canvasEmptyTitle => '이미지가 없습니다';
 
   @override

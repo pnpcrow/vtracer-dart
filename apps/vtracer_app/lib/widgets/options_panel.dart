@@ -1,20 +1,24 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:vtracer_ai/vtracer_ai.dart';
 
 import '../controller.dart';
 import '../l10n/app_localizations.dart';
+import '../settings.dart';
 
 /// The tuning panel — the same controls as the vtracer webapp, with a short
-/// helper description under each setting.
+/// helper description under each setting, plus the AI auto section.
 class OptionsPanel extends StatelessWidget {
   final AppState state;
+  final SettingsController settings;
 
-  const OptionsPanel({super.key, required this.state});
+  const OptionsPanel({super.key, required this.state, required this.settings});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final colorOptions = state.clustering == UiClustering.color;
     final splineOptions = state.mode == UiFitMode.spline;
 
@@ -49,6 +53,71 @@ class OptionsPanel extends StatelessWidget {
             icon: const Icon(Icons.play_arrow_rounded),
             label: Text(state.rendering ? l10n.panelRendering : l10n.panelApply),
           ),
+          const Divider(height: 32),
+
+          _groupHeader(context, l10n.aiSection, l10n.aiSectionDesc),
+          Row(children: [
+            Expanded(
+              child: _toggle(
+                context,
+                l10n.aiGoalBalanced,
+                selected: state.aiGoal == TuningGoal.balanced,
+                onTap: () =>
+                    state.update(() => state.aiGoal = TuningGoal.balanced),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _toggle(
+                context,
+                l10n.aiGoalFaithful,
+                selected: state.aiGoal == TuningGoal.faithful,
+                onTap: () =>
+                    state.update(() => state.aiGoal = TuningGoal.faithful),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _toggle(
+                context,
+                l10n.aiGoalCompact,
+                selected: state.aiGoal == TuningGoal.compact,
+                onTap: () =>
+                    state.update(() => state.aiGoal = TuningGoal.compact),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Tooltip(
+            message: state.hasImage ? '' : l10n.aiNeedsImageTooltip,
+            excludeFromSemantics: state.hasImage,
+            child: FilledButton.tonalIcon(
+              onPressed: state.hasImage && !state.aiBusy && !state.rendering
+                  ? () => state.applyAiAuto(settings.needle3Endpoint)
+                  : null,
+              icon: state.aiBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.auto_fix_high),
+              label: Text(state.aiBusy ? l10n.aiRunning : l10n.aiRunButton),
+            ),
+          ),
+          if (state.aiRationale != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.aiDecisionSummary(
+                state.aiEngineName == 'needle3'
+                    ? l10n.aiEngineNeedle3
+                    : l10n.aiEngineHeuristic,
+                ((state.aiConfidence ?? 0) * 100).round(),
+                state.aiRationale!,
+              ),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ],
           const Divider(height: 32),
 
           _groupHeader(context, l10n.groupClustering, l10n.groupClusteringDesc),

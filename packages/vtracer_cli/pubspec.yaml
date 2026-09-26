@@ -10,6 +10,8 @@ environment:
 dependencies:
   vtracer:
     path: ../vtracer
+  vtracer_ai:
+    path: ../vtracer_ai
   visioncortex:
     path: ../visioncortex
   image: ^4.9.0

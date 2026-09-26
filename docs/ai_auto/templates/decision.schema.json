@@ -1,0 +1,131 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "clustering",
+    "hierarchical",
+    "fit_mode",
+    "filter_speckle",
+    "color_precision",
+    "layer_difference",
+    "corner_threshold",
+    "segment_length",
+    "splice_threshold",
+    "max_colors",
+    "simplify",
+    "binary_threshold",
+    "binary_adaptive",
+    "watershed_detail",
+    "rationale",
+    "confidence"
+  ],
+  "properties": {
+    "clustering": {
+      "type": "string",
+      "enum": [
+        "color-cluster",
+        "binary",
+        "watershed"
+      ],
+      "description": "Region-forming algorithm. binary = black/white line art or 1-bit scans; watershed = organic photo-like regions; color-cluster = flat/poster color art and the general case."
+    },
+    "hierarchical": {
+      "type": "string",
+      "enum": [
+        "stacked",
+        "cutout"
+      ],
+      "description": "stacked traces layers independently; cutout produces a seam-free mosaic (preferred for flat art with few colors)."
+    },
+    "fit_mode": {
+      "type": "string",
+      "enum": [
+        "pixel",
+        "polygon",
+        "spline"
+      ],
+      "description": "pixel = exact lattice (pixel art); polygon = straight Douglas-Peucker edges; spline = corner detection + cubic Beziers (photos, smooth art)."
+    },
+    "filter_speckle": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 128,
+      "description": "Discard regions smaller than this many px on a side. Raise with noiseLevel; keep low (0-4) for fine line art."
+    },
+    "color_precision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "description": "Significant bits per RGB channel before clustering. Raise toward 8 for photos/soft gradients; 5-6 suffices for flat art."
+    },
+    "layer_difference": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "Color distance between stacked gradient layers. High (40-64) collapses photo gradients into few layers; low (8-24) keeps flat-art color boundaries exact."
+    },
+    "corner_threshold": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 180,
+      "description": "Degrees; smaller = more corners preserved. Photos tolerate high values (120-180); logos/signage with hard corners want 40-90."
+    },
+    "segment_length": {
+      "type": "number",
+      "minimum": 3.5,
+      "maximum": 10,
+      "description": "Max segment length (px) before subdivision. Smaller tracks detail at the cost of more nodes."
+    },
+    "splice_threshold": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 180,
+      "description": "Degrees; smaller = more spline splices (smoother, simpler)."
+    },
+    "max_colors": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 2,
+      "maximum": 64,
+      "description": "Quantize the palette to at most this many colors. null = keep the clustered palette. Use 8-24 for compact output on complex images."
+    },
+    "simplify": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.1,
+      "maximum": 10,
+      "description": "Curve simplification tolerance (px). null = off. Use 1-2.5 to cut curve count on photos/illustrations; keep off for precision line art."
+    },
+    "binary_threshold": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "Fixed black/white cutoff (only when clustering=binary). Pick the luminance valley for bimodal images."
+    },
+    "binary_adaptive": {
+      "type": "boolean",
+      "description": "Use Bradley-Roth adaptive thresholding when the background lighting is uneven (high background_uniformity)."
+    },
+    "watershed_detail": {
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 255,
+      "description": "Watershed hierarchy cut level (only when clustering=watershed); higher keeps more regions."
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "One-sentence justification referencing the image features that drove the decision."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Calibrated confidence in this decision."
+    }
+  }
+}

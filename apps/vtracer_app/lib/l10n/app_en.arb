@@ -15,6 +15,31 @@
   "panelApply": "Apply",
   "panelRendering": "Rendering…",
 
+  "aiSection": "AI Auto",
+  "aiSectionDesc": "Analyzes the image features and picks the clustering and tuning parameters for you.",
+  "aiGoalBalanced": "Balanced",
+  "aiGoalFaithful": "Faithful",
+  "aiGoalCompact": "Compact",
+  "aiRunButton": "Analyze & apply",
+  "aiRunning": "Analyzing…",
+  "aiNeedsImageTooltip": "Load an image first",
+  "aiDecisionSummary": "{engine} · confidence {percent}% — {rationale}",
+  "@aiDecisionSummary": {
+    "placeholders": {
+      "engine": {"type": "String"},
+      "percent": {"type": "int"},
+      "rationale": {"type": "String"}
+    }
+  },
+  "aiFailed": "AI auto failed: {error}",
+  "@aiFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "aiEngineHeuristic": "built-in heuristics",
+  "aiEngineNeedle3": "Needle3 model",
+
   "groupClustering": "Clustering",
   "groupClusteringDesc": "How pixels are segmented and grouped into color layers.",
   "clusterBw": "B/W",
@@ -111,6 +136,9 @@
   "progressPhaseOptimize": "Optimizing",
 
   "settingsTitle": "Settings",
+  "settingsNeedle3": "Needle3 endpoint",
+  "settingsNeedle3Hint": "http://127.0.0.1:8080/run",
+  "settingsNeedle3Desc": "URL of a running `needle --serve` used by AI Auto for its decisions. Empty = built-in heuristics (offline).",
   "settingsTheme": "Theme",
   "settingsThemeSystem": "System",
   "settingsThemeSystemDesc": "Follows your OS light/dark setting (default).",

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:vtracer/vtracer.dart';
 import 'package:vtracer/worker.dart';
+import 'package:vtracer_ai/vtracer_ai.dart';
 
 /// Which pipeline options the UI exposes (mirrors the vtracer webapp).
 enum UiClustering { color, bw }
@@ -111,6 +112,18 @@ class AppState extends ChangeNotifier {
   int spliceThreshold = 45;
   int pathPrecision = 8;
 
+  /// Extra tuning targets the panel has no slider for; usually null, set by
+  /// the AI auto mode when its decision uses them.
+  int? maxColors;
+  double? simplify;
+
+  // --- AI auto mode ---------------------------------------------------------
+  TuningGoal aiGoal = TuningGoal.balanced;
+  bool aiBusy = false;
+  String? aiEngineName;
+  String? aiRationale;
+  double? aiConfidence;
+
   // --- render state ---------------------------------------------------------
   bool rendering = false;
 
@@ -149,6 +162,8 @@ class AppState extends ChangeNotifier {
       lengthThreshold: lengthThreshold,
       spliceThreshold: spliceThreshold,
       pathPrecision: pathPrecision,
+      maxColors: maxColors,
+      simplify: simplify,
     );
   }
 
@@ -204,6 +219,63 @@ class AppState extends ChangeNotifier {
 
   /// Re-render with the current parameters.
   Future<void> apply() => render();
+
+  /// AI auto mode: extract image features, ask the decision engine (built-in
+  /// heuristics, or a Needle3 model when `needle3Endpoint` is configured)
+  /// for a parameter set, move the panel fields onto it, and render.
+  ///
+  /// The decision is validated and clamped inside [AutoTuner], so the panel
+  /// sliders always receive in-range values.
+  Future<void> applyAiAuto(String needle3Endpoint) async {
+    final image = _image;
+    if (image == null || aiBusy) return;
+
+    aiBusy = true;
+    notifyListeners();
+    try {
+      final endpoint = needle3Endpoint.trim();
+      final engine = endpoint.isEmpty
+          ? HeuristicDecisionEngine() as DecisionEngine
+          : Needle3DecisionEngine(
+              runtime: Needle3HttpRuntime(Uri.parse(endpoint)),
+            );
+      final result =
+          await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
+      final d = result.decision;
+
+      clustering = switch (d.clustering) {
+        Clustering.binary => UiClustering.bw,
+        _ => UiClustering.color,
+      };
+      hierarchical = d.hierarchical == Hierarchical.cutout
+          ? UiHierarchical.cutout
+          : UiHierarchical.stacked;
+      mode = switch (d.fitMode) {
+        FitMode.pixel => UiFitMode.pixel,
+        FitMode.polygon => UiFitMode.polygon,
+        FitMode.spline => UiFitMode.spline,
+      };
+      filterSpeckle = d.filterSpeckle;
+      colorPrecision = d.colorPrecision;
+      layerDifference = d.layerDifference;
+      cornerThreshold = d.cornerThreshold;
+      lengthThreshold = d.lengthThreshold;
+      spliceThreshold = d.spliceThreshold;
+      maxColors = d.maxColors;
+      simplify = d.simplify;
+
+      aiEngineName = result.engineName;
+      aiRationale = d.rationale;
+      aiConfidence = d.confidence;
+      dirty = true;
+      await render();
+    } catch (e) {
+      error = '$e';
+    } finally {
+      aiBusy = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> render() async {
     final worker = _worker;

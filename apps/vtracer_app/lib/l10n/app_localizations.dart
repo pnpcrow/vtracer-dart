@@ -164,6 +164,78 @@ abstract class AppLocalizations {
   /// **'Rendering…'**
   String get panelRendering;
 
+  /// No description provided for @aiSection.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Auto'**
+  String get aiSection;
+
+  /// No description provided for @aiSectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzes the image features and picks the clustering and tuning parameters for you.'**
+  String get aiSectionDesc;
+
+  /// No description provided for @aiGoalBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get aiGoalBalanced;
+
+  /// No description provided for @aiGoalFaithful.
+  ///
+  /// In en, this message translates to:
+  /// **'Faithful'**
+  String get aiGoalFaithful;
+
+  /// No description provided for @aiGoalCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get aiGoalCompact;
+
+  /// No description provided for @aiRunButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze & apply'**
+  String get aiRunButton;
+
+  /// No description provided for @aiRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing…'**
+  String get aiRunning;
+
+  /// No description provided for @aiNeedsImageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Load an image first'**
+  String get aiNeedsImageTooltip;
+
+  /// No description provided for @aiDecisionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{engine} · confidence {percent}% — {rationale}'**
+  String aiDecisionSummary(String engine, int percent, String rationale);
+
+  /// No description provided for @aiFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI auto failed: {error}'**
+  String aiFailed(String error);
+
+  /// No description provided for @aiEngineHeuristic.
+  ///
+  /// In en, this message translates to:
+  /// **'built-in heuristics'**
+  String get aiEngineHeuristic;
+
+  /// No description provided for @aiEngineNeedle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Needle3 model'**
+  String get aiEngineNeedle3;
+
   /// No description provided for @groupClustering.
   ///
   /// In en, this message translates to:
@@ -499,6 +571,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get settingsTitle;
+
+  /// No description provided for @settingsNeedle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Needle3 endpoint'**
+  String get settingsNeedle3;
+
+  /// No description provided for @settingsNeedle3Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'http://127.0.0.1:8080/run'**
+  String get settingsNeedle3Hint;
+
+  /// No description provided for @settingsNeedle3Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'URL of a running `needle --serve` used by AI Auto for its decisions. Empty = built-in heuristics (offline).'**
+  String get settingsNeedle3Desc;
 
   /// No description provided for @settingsTheme.
   ///
