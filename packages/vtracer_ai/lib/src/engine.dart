@@ -16,10 +16,21 @@ abstract class DecisionEngine {
 /// features and maps the class + goal to a parameter set.
 ///
 /// This is both the always-available fallback (no model, no network) and the
-/// baseline that repairs partial model outputs in `Needle3DecisionEngine`.
+/// candidate factory for the chooser-style model engines
+/// (`Needle3CandidateEngine`): the three class profiles below are the
+/// options the model chooses between.
 class HeuristicDecisionEngine implements DecisionEngine {
   @override
   String get name => 'heuristic';
+
+  /// The three candidate profiles the chooser-style engines offer to the
+  /// model: `A` = line art (binary), `B` = flat art (color cluster,
+  /// mosaic when flat enough), `C` = photo (coarse stacked layers).
+  List<(String, AiDecision)> candidates(ImageFeatures f, TuningGoal goal) => [
+        ('A', _lineArt(f, goal)),
+        ('B', _flatArt(f, goal)),
+        ('C', _photo(f, goal)),
+      ];
 
   @override
   Future<AiDecision> decide(ImageFeatures f, TuningGoal goal) async {

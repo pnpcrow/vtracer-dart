@@ -50,4 +50,6 @@ export 'src/decision.dart';
 export 'src/engine.dart';
 export 'src/features.dart';
 export 'src/needle3.dart';
+export 'src/needle3_candidate.dart';
+export 'src/needle3_embedded.dart';
 export 'src/schema.dart';

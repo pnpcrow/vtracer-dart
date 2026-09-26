@@ -112,6 +112,33 @@ class AiDecision {
         goal: goal,
       );
 
+  /// Metadata-only copy: same parameters, new rationale/confidence/source.
+  AiDecision withMeta({
+    String? rationale,
+    double? confidence,
+    DecisionSource? source,
+  }) =>
+      AiDecision(
+        clustering: clustering,
+        hierarchical: hierarchical,
+        fitMode: fitMode,
+        filterSpeckle: filterSpeckle,
+        colorPrecision: colorPrecision,
+        layerDifference: layerDifference,
+        cornerThreshold: cornerThreshold,
+        lengthThreshold: lengthThreshold,
+        spliceThreshold: spliceThreshold,
+        maxColors: maxColors,
+        simplify: simplify,
+        binaryThreshold: binaryThreshold,
+        binaryAdaptive: binaryAdaptive,
+        watershedDetail: watershedDetail,
+        rationale: rationale ?? this.rationale,
+        confidence: confidence ?? this.confidence,
+        source: source ?? this.source,
+        goal: goal,
+      );
+
   /// Force every parameter back into the range the pipeline accepts.
   AiDecision clamped() {
     final clustering = this.clustering;

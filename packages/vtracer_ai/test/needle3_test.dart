@@ -181,4 +181,54 @@ void main() {
       throwsA(isA<Needle3Exception>()),
     );
   });
+
+  test('engine-reported failure (success:false) throws', () async {
+    final body = {
+      'type': 'call',
+      'success': false,
+      'error': 'tool call truncated: token budget exhausted',
+      'function_calls': [],
+    };
+    final engine = Needle3DecisionEngine(runtime: FakeRuntime(body));
+    await expectLater(
+      engine.decide(features, TuningGoal.balanced),
+      throwsA(isA<Needle3Exception>()),
+    );
+  });
+
+  test('model abstention (success:true, no call) throws', () async {
+    final body = {
+      'type': 'call',
+      'success': true,
+      'function_calls': [],
+      'suppressed_calls': [],
+      'confidence': 0.007,
+    };
+    final engine = Needle3DecisionEngine(runtime: FakeRuntime(body));
+    await expectLater(
+      engine.decide(features, TuningGoal.balanced),
+      throwsA(isA<Needle3Exception>()),
+    );
+  });
+
+  test('compact profile sends the minimal prompt set', () async {
+    final runtime = FakeRuntime(fullAnswer());
+    final engine = Needle3DecisionEngine(
+      runtime: runtime,
+      promptProfile: PromptProfile.compact,
+    );
+    await engine.decide(features, TuningGoal.balanced);
+
+    final invocation = runtime.lastInvocation!;
+    expect(invocation.system, DecisionTemplates.compactSystemPrompt(TuningGoal.balanced));
+    expect(invocation.prompt, contains('image_features'));
+    final properties =
+        (invocation.tool['parameters'] as Map<String, Object?>)['properties']
+            as Map<String, Object?>;
+    // Descriptions are stripped so the tiny model keeps its context budget.
+    expect(
+      properties.values.every((p) => !(p as Map<String, Object?>).containsKey('description')),
+      isTrue,
+    );
+  });
 }

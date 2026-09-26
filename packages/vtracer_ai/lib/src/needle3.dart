@@ -115,7 +115,7 @@ class Needle3HttpRuntime implements Needle3Runtime {
 }
 
 /// Runs the `needle` CLI as a subprocess (`needle --model <file> --tools
-/// <file> --prompt <prompt>`); desktop platforms only.
+/// <file> --system <file> --prompt <prompt>`); desktop platforms only.
 class Needle3ProcessRuntime implements Needle3Runtime {
   /// Path to the executable (`needle` / `needle.exe`).
   final String executable;
@@ -123,21 +123,29 @@ class Needle3ProcessRuntime implements Needle3Runtime {
   /// Path to the `.cact` model file.
   final String modelPath;
 
+  /// Response token limit passed as `--max` (engine default 512).
+  final int maxNewTokens;
+
   final Duration timeout;
 
   Needle3ProcessRuntime({
     required this.modelPath,
     String? executable,
+    this.maxNewTokens = 512,
     this.timeout = const Duration(seconds: 60),
   }) : executable = executable ?? 'needle';
 
   @override
   Future<Needle3Answer> run(Needle3Invocation invocation) async {
     final dir = await Directory.systemTemp.createTemp('vtracer_needle3');
-    final toolsFile = File('${dir.path}${Platform.pathSeparator}tools.json');
+    final sep = Platform.pathSeparator;
+    final toolsFile = File('${dir.path}${sep}tools.json');
+    final systemFile = File('${dir.path}${sep}system.txt');
     try {
       await toolsFile.writeAsString(
           const JsonEncoder.withIndent('  ').convert([invocation.tool]));
+      // `--system` takes a file path, not inline text.
+      await systemFile.writeAsString(invocation.system);
       final result = await Process.run(
         executable,
         [
@@ -145,6 +153,10 @@ class Needle3ProcessRuntime implements Needle3Runtime {
           modelPath,
           '--tools',
           toolsFile.path,
+          '--system',
+          systemFile.path,
+          '--max',
+          '$maxNewTokens',
           '--prompt',
           invocation.prompt,
         ],
@@ -177,10 +189,15 @@ class Needle3DecisionEngine implements DecisionEngine {
   final String model;
   final DecisionEngine baseline;
 
+  /// Which prompt set to send (see [PromptProfile]); the embedded base
+  /// model needs [PromptProfile.compact].
+  final PromptProfile promptProfile;
+
   Needle3DecisionEngine({
     required this.runtime,
     this.model = 'needle3.cact',
     DecisionEngine? baseline,
+    this.promptProfile = PromptProfile.full,
   }) : baseline = baseline ?? HeuristicDecisionEngine();
 
   @override
@@ -189,11 +206,12 @@ class Needle3DecisionEngine implements DecisionEngine {
   @override
   Future<AiDecision> decide(ImageFeatures features, TuningGoal goal) async {
     final base = await baseline.decide(features, goal);
+    final prompts = DecisionTemplates.promptsFor(promptProfile, features, goal);
     final invocation = Needle3Invocation(
       model: model,
-      system: DecisionTemplates.systemPrompt(goal),
-      prompt: DecisionTemplates.featurePrompt(features, goal),
-      tool: DecisionTemplates.toolDefinition(goal),
+      system: prompts.system,
+      prompt: prompts.prompt,
+      tool: prompts.tool,
     );
     final answer = await runtime.run(invocation);
     return mergeAnswer(base, answer, goal);
@@ -373,7 +391,20 @@ Needle3Answer parseNeedle3Answer(Object? body) {
   if (body is! Map<String, Object?>) {
     throw Needle3Exception('unexpected response shape: ${body.runtimeType}');
   }
+  // The engine reports failed turns with success:false and an empty
+  // function_calls list; surface the error instead of parsing the envelope
+  // as if it were tool arguments.
+  if (body['success'] == false) {
+    final error = body['error'] ?? body['reason'] ?? 'tool call failed';
+    throw Needle3Exception('$error');
+  }
   final calls = (body['function_calls'] ?? body['tool_calls']) as List<Object?>?;
+  if (calls != null && calls.isEmpty) {
+    // success:true but the engine dispatched nothing — the model abstained
+    // (e.g. its grounding validation suppressed the call). Treat as a
+    // failed call so the caller falls back to the heuristic baseline.
+    throw Needle3Exception('model abstained: no tool call dispatched');
+  }
   if (calls != null && calls.isNotEmpty) {
     final call = calls.first;
     if (call is Map<String, Object?>) {

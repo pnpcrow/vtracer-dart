@@ -17,6 +17,7 @@ dependencies:
     path: ../visioncortex
 
 dev_dependencies:
+  image: ^4.9.0
   test: ^1.25.0
 
 resolution: workspace

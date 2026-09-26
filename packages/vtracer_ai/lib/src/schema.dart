@@ -3,6 +3,20 @@ import 'dart:convert';
 import 'decision.dart';
 import 'features.dart';
 
+/// Which prompt set the decision engine sends to the model.
+enum PromptProfile {
+  /// The full templates: rich parameter descriptions and rule guidance.
+  /// Suited to larger models (e.g. through `needle --serve` with a
+  /// fine-tuned engine).
+  full,
+
+  /// A minimal profile measured to complete on the base 121M Needle3 model:
+  /// a 3-sentence system prompt, a description-less tool schema and a
+  /// one-line feature payload. Heavier prefixes make the tiny model
+  /// degenerate into repetition and exhaust its token budget.
+  compact,
+}
+
 /// Single source of truth for the model-facing decision templates:
 ///
 /// * [decisionJsonSchema] — the JSON Schema the model must fill (bound to a
@@ -210,4 +224,121 @@ Hard rules:
           'compact — minimize shape count and file size while staying '
               'recognizable.',
       };
+
+  // ---- compact profile (measured on the base 121M needle3 model) ----------
+
+  /// Three-sentence system prompt; anything heavier makes the tiny model
+  /// degenerate into a repetition loop.
+  static String compactSystemPrompt(TuningGoal goal) => '''
+You configure an image-to-vector converter. From the image stats, call
+$toolName exactly once with every field inside its range.
+Set max_colors or simplify to null unless the goal needs them. Then stop.
+''';
+
+  /// One-line feature payload.
+  static String compactFeaturePrompt(ImageFeatures f, TuningGoal goal) =>
+      'goal: ${goal.name}\n'
+      'image_features: ${const JsonEncoder().convert(f.toPromptPayload())}';
+
+  /// The tool schema with `description` fields stripped — the JSON grammar
+  /// (types, enums, ranges) carries the constraint; prose only wastes the
+  /// tiny model's context.
+  static Map<String, Object?> compactToolDefinition(TuningGoal goal) =>
+      _stripDescriptions(toolDefinition(goal)) as Map<String, Object?>;
+
+  static Object? _stripDescriptions(Object? node) {
+    if (node is Map<String, Object?>) {
+      final out = <String, Object?>{};
+      node.forEach((key, value) {
+        if (key == 'description') return;
+        out[key] = _stripDescriptions(value);
+      });
+      return out;
+    }
+    if (node is List<Object?>) return node.map(_stripDescriptions).toList();
+    return node;
+  }
+
+  /// Resolve the prompt set for a [profile].
+  static ({String system, String prompt, Map<String, Object?> tool})
+      promptsFor(PromptProfile profile, ImageFeatures f, TuningGoal goal) =>
+          switch (profile) {
+            PromptProfile.full => (
+                system: systemPrompt(goal),
+                prompt: featurePrompt(f, goal),
+                tool: toolDefinition(goal),
+              ),
+            PromptProfile.compact => (
+                system: compactSystemPrompt(goal),
+                prompt: compactFeaturePrompt(f, goal),
+                tool: compactToolDefinition(goal),
+              ),
+          };
+
+  // ---- chooser profile (measured: the only design the base model reliably
+  // dispatches on real images) -----------------------------------------------
+
+  /// Tool for the chooser profile: the model's whole job is to pick the
+  /// letter of the candidate that best matches the features. Tiny output,
+  /// and the chosen letter appears in the context, so the engine's grounding
+  /// validation accepts it.
+  static Map<String, Object?> chooserToolDefinition() => {
+        'name': 'choose_candidate',
+        'parameters': {
+          'type': 'object',
+          'additionalProperties': false,
+          'required': ['choice'],
+          'properties': {
+            'choice': {
+              'type': 'string',
+              'enum': ['A', 'B', 'C'],
+            },
+          },
+        },
+      };
+
+  static String chooserSystemPrompt() => '''
+You configure an image-to-vector converter. Three candidate parameter sets
+(A, B, C) are given. Call choose_candidate exactly once with the letter of
+the candidate that best matches the image features.
+''';
+
+  /// Feature payload plus the candidate parameter sets, one line each.
+  static String chooserFeaturePrompt(
+    ImageFeatures f,
+    TuningGoal goal,
+    List<(String, AiDecision)> candidates,
+  ) {
+    final buffer = StringBuffer()
+      ..writeln('goal: ${goal.name}')
+      ..writeln('image_features: ${const JsonEncoder().convert(f.toPromptPayload())}')
+      ..writeln('candidates:');
+    for (final (letter, decision) in candidates) {
+      buffer.writeln('$letter = ${const JsonEncoder().convert({
+            'clustering': decision.toJson()['clustering'],
+            'hierarchical': decision.toJson()['hierarchical'],
+            'fit_mode': decision.toJson()['fit_mode'],
+            'filter_speckle': decision.filterSpeckle,
+            'color_precision': decision.colorPrecision,
+            'layer_difference': decision.layerDifference,
+            'corner_threshold': decision.cornerThreshold,
+            'max_colors': decision.maxColors,
+            'simplify': decision.simplify,
+          })}');
+    }
+    return buffer.toString().trimRight();
+  }
+
+  /// The chooser prompt set.
+  static ({String system, String prompt, Map<String, Object?> tool})
+      chooserPrompts(
+    ImageFeatures f,
+    TuningGoal goal,
+    List<(String, AiDecision)> candidates,
+  ) =>
+      (
+        system: chooserSystemPrompt(),
+        prompt: chooserFeaturePrompt(f, goal, candidates),
+        tool: chooserToolDefinition(),
+      );
 }
