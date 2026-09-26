@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>VTracer AI 자동 모드 사용 설명서 — Needle3는 어떻게 판단하나</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: 794px 1123px; margin: 0; }
+
+  :root {
+    --bg: #FFFFFF;
+    --ink: #1E293B;
+    --muted: #5B6B82;
+    --accent: #2563EB;
+    --accent-deep: #1D4ED8;
+    --pale: #F4F8FE;
+    --line: #DBE4F0;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 794px;
+    background: var(--bg);
+  }
+
+  body {
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    width: 794px;
+    height: 1123px;
+    position: relative;
+    box-sizing: border-box;
+    padding: 58px 60px 76px;
+    background: var(--bg);
+    break-after: page;
+    page-break-after: always;
+  }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+
+  /* ---------- typography ---------- */
+  .kicker {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h2 {
+    font-size: 27px;
+    font-weight: 900;
+    line-height: 1.3;
+    margin: 0 0 14px;
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 18px 0 6px;
+  }
+  p { margin: 0 0 10px; }
+  p.lead { font-size: 16.5px; font-weight: 500; }
+  .muted { color: var(--muted); }
+  .accent { color: var(--accent-deep); font-weight: 700; }
+  strong { font-weight: 700; }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+
+  .kicker-chip {
+    display: inline-block;
+    background: var(--pale);
+    color: var(--accent-deep);
+    border-radius: 999px;
+    padding: 3px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+
+  /* ---------- figure ---------- */
+  figure {
+    display: block;
+    width: 100%;
+    margin: 16px 0 0;
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 14px 10px;
+    box-sizing: border-box;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    padding-bottom: 4px;
+  }
+
+  .card {
+    background: var(--pale);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-top: 14px;
+    font-size: 15.5px;
+  }
+  .card .tag {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-deep);
+  }
+
+  code.cmd {
+    display: block;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-family: 'Consolas', 'Menlo', 'Noto Sans KR', monospace;
+    font-size: 14px;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+  code.cmd .cm { color: #7DD3FC; }
+
+  table.trouble {
+    width: 100%;
+    margin: 0 auto;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  table.trouble th {
+    background: var(--pale);
+    color: var(--accent-deep);
+    font-weight: 700;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--line);
+  }
+  table.trouble td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    line-height: 1.55;
+  }
+
+  .gloss {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    margin-top: 14px;
+  }
+  .gloss .g {
+    background: var(--pale);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .gloss .g b { color: var(--accent-deep); }
+  .gloss .g span { font-size: 14.5px; }
+
+  .footer {
+    position: absolute;
+    left: 60px; right: 60px; bottom: 26px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .steps { margin-top: 6px; }
+  .steps .st {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .steps .n {
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-weight: 900;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px;
+  }
+  .steps .t b { display: block; font-size: 16.5px; }
+  .steps .t { font-size: 15px; color: var(--ink); }
+  .steps .t .see { color: var(--muted); }
+
+  /* ---------- cover ---------- */
+  .cover { padding: 90px 84px 76px; }
+  .cover .hero {
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.28;
+    letter-spacing: -0.5px;
+    margin: 18px 0 0;
+  }
+  .cover .sub {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 22px;
+    line-height: 1.5;
+  }
+  .cover .desc {
+    font-size: 16px;
+    color: var(--muted);
+    margin-top: 18px;
+    max-width: 560px;
+    line-height: 1.8;
+  }
+  .cover .meta {
+    position: absolute;
+    left: 84px; right: 84px; bottom: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 14px;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .cover .meta b { color: var(--ink); font-size: 15px; }
+
+  /* browser preview auto-scale (print unaffected) */
+  @media screen {
+    html {
+      height: auto;
+      display: flex;
+      justify-content: center;
+      background: #E8EEF6;
+    }
+    body {
+      transform-origin: top center;
+      scale: min(1, calc(100vw / 794));
+      margin: 0 auto;
+      box-shadow: 0 0 40px rgba(15, 23, 42, 0.18);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ PAGE 1 · 표지 ═══════════════ -->
+<div class="page cover">
+  <span class="kicker-chip">VTRACER · AI 자동 모드 사용 설명서</span>
+  <div class="hero">사진을 그림으로<br>바꾸는 AI 도우미</div>
+  <div class="sub">Needle3는 어떻게 판단할까?</div>
+  <p class="desc">vtracer가 사진을 SVG 그림으로 바꿀 때 필요한 14개의 설정 값을,
+  아주 작은 AI 두뇌 Needle3가 대신 골라 주는 원리와 사용 방법을
+  누구나 이해할 수 있게 정리한 안내서입니다.</p>
+  <figure style="margin-top:34px;">
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="사진에서 그림으로">
+      <!-- pixel photo -->
+      <rect x="20" y="25" width="160" height="160" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <g fill="#B9CDF2">
+        <rect x="32" y="37" width="16" height="16"/><rect x="48" y="37" width="16" height="16"/><rect x="80" y="37" width="16" height="16"/><rect x="128" y="37" width="16" height="16"/><rect x="144" y="37" width="16" height="16"/>
+        <rect x="32" y="69" width="16" height="16"/><rect x="64" y="69" width="16" height="16"/><rect x="112" y="69" width="16" height="16"/>
+        <rect x="48" y="101" width="16" height="16"/><rect x="96" y="101" width="16" height="16"/><rect x="144" y="101" width="16" height="16"/>
+        <rect x="32" y="133" width="16" height="16"/><rect x="80" y="133" width="16" height="16"/><rect x="128" y="133" width="16" height="16"/>
+        <rect x="48" y="149" width="16" height="16"/><rect x="112" y="149" width="16" height="16"/>
+      </g>
+      <text x="100" y="205" text-anchor="middle" font-size="14" fill="#5B6B82">사진 (비트맵)</text>
+      <!-- arrow -->
+      <line x1="195" y1="105" x2="232" y2="105" stroke="#2563EB" stroke-width="3"/>
+      <path d="M232 105 l-12 -7 v14 z" fill="#2563EB"/>
+      <!-- helper brain -->
+      <rect x="240" y="25" width="160" height="160" rx="12" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+      <circle cx="320" cy="82" r="26" fill="#FFFFFF" stroke="#2563EB" stroke-width="2.5"/>
+      <circle cx="311" cy="76" r="5" fill="#2563EB"/><circle cx="330" cy="76" r="5" fill="#2563EB"/>
+      <path d="M310 90 q10 8 20 0" stroke="#2563EB" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="320" y="135" text-anchor="middle" font-size="15" font-weight="700" fill="#1D4ED8">Needle3 도우미</text>
+      <text x="320" y="158" text-anchor="middle" font-size="13" fill="#5B6B82">다이얼을 대신 돌려 줌</text>
+      <text x="320" y="205" text-anchor="middle" font-size="14" fill="#5B6B82">AI 자동 판단</text>
+      <!-- arrow -->
+      <line x1="415" y1="105" x2="452" y2="105" stroke="#2563EB" stroke-width="3"/>
+      <path d="M452 105 l-12 -7 v14 z" fill="#2563EB"/>
+      <!-- vector art -->
+      <rect x="460" y="25" width="160" height="160" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <circle cx="500" cy="70" r="16" fill="#B9CDF2"/>
+      <path d="M472 160 L508 108 L528 132 L548 96 L612 160 Z" fill="#FFFFFF" stroke="#2563EB" stroke-width="2.5" stroke-linejoin="round"/>
+      <text x="540" y="205" text-anchor="middle" font-size="14" fill="#5B6B82">그림 (SVG)</text>
+    </svg>
+  </figure>
+  <div class="meta">
+    <span><b>vtracer-dart</b> · 누구나 따라 하는 사용 설명서</span>
+    <span>2026년 9월</span>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 2 · 이것이 무엇인가요? ═══════════════ -->
+<div class="page">
+  <p class="kicker">1 · 이것이 무엇인가요?</p>
+  <h2>AI 자동 모드는 "다이얼을 대신 돌려 주는 조수"</h2>
+  <p class="lead"><strong>vtracer</strong>는 사진을 선과 곡선으로 된 그림(SVG)으로 바꾸는 변환기입니다.
+  결과 품질은 <strong>설정 다이얼 14개</strong>(색을 얼마나 세밀하게 볼지, 잡점을 얼마나 지울지 등)가 결정하는데,
+  정답은 없고 사진마다 알맞은 값이 다릅니다.</p>
+  <p><strong>AI 자동 모드</strong>는 이 다이얼을 대신 돌려 주는 기능입니다. 사진의 성격을 숫자로 요약해 보고,
+  알맞은 설정 세트를 골라 슬라이더까지 움직여 줍니다.</p>
+  <p><strong>Needle3</strong>는 그 판단을 맡은 아주 작은 AI 두뇌입니다. 모델 크기는 노래 한 곡 정도(8–35MB)라서
+  <strong>앱 안에 내장</strong>되어 함께 배포되고, 인터넷이나 서버 없이 기기에서 바로 실행됩니다.</p>
+  <div class="card">
+    <span class="tag">비유로 이해하기</span>
+    <p style="margin:6px 0 0;">사진은 <strong>재료</strong>, 설정 다이얼은 <strong>간 맞추기</strong>입니다.
+    Needle3는 재료를 살짝 보고 "오늘은 싱겁게, 소금은 2 꼬집!" 하고 알려 주는
+    <strong>요리 도우미</strong>입니다. 다만 마음대로 간을 하지 않고, 뒤에서 설명할
+    <strong>안전 확인</strong>을 거친 답만 주방에 들어갑니다.</p>
+  </div>
+  <figure>
+    <svg viewBox="0 0 674 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="재료와 간 맞추기">
+      <rect x="12" y="20" width="190" height="88" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <text x="107" y="58" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">사진 = 재료</text>
+      <text x="107" y="84" text-anchor="middle" font-size="13" fill="#5B6B82">색 · 잡음 · 선의 밀도</text>
+      <line x1="216" y1="64" x2="258" y2="64" stroke="#2563EB" stroke-width="3"/>
+      <path d="M258 64 l-11 -6.5 v13 z" fill="#2563EB"/>
+      <rect x="272" y="20" width="190" height="88" rx="12" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+      <text x="367" y="52" text-anchor="middle" font-size="15" font-weight="700" fill="#1D4ED8">Needle3 = 간 추천</text>
+      <text x="367" y="78" text-anchor="middle" font-size="13" fill="#5B6B82">숫자 성적표를 보고 골라 줌</text>
+      <line x1="476" y1="64" x2="518" y2="64" stroke="#2563EB" stroke-width="3"/>
+      <path d="M518 64 l-11 -6.5 v13 z" fill="#2563EB"/>
+      <rect x="532" y="20" width="130" height="88" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <text x="597" y="58" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">변환기 = 주방</text>
+      <text x="597" y="84" text-anchor="middle" font-size="13" fill="#5B6B82">정해진 값으로만 조리</text>
+      <text x="337" y="140" text-anchor="middle" font-size="13.5" fill="#5B6B82">성적표 → 답안지 → 안전 대조, 이 3걸음으로 판단이 완성됩니다</text>
+    </svg>
+  </figure>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>2 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 3 · 1단계 성적표 ═══════════════ -->
+<div class="page">
+  <p class="kicker">2 · 적용 방식 — 1단계</p>
+  <h2>사진을 "숫자 성적표"로 압축합니다</h2>
+  <p class="lead">Needle3는 아주 작은 두뇌라서 사진 전체(수백만 개의 점)를 직접 볼 수 없습니다.
+  대신 vtracer가 사진을 <strong>17개의 숫자</strong>로 요약한 <strong>성적표</strong>를 만들어 전달합니다.</p>
+  <p>성적표에는 이런 항목이 적힙니다 — 색이 몇 종류인지, 잡음(노이즈)이 얼마나 끼었는지,
+  선이 얼마나 촘촘한지, 배경은 고른 색인지 등입니다. 사진이 아무리 커도
+  성적표는 언제나 같은 크기라서 판단이 아주 빠릅니다(약 0.1초).</p>
+  <figure>
+    <svg viewBox="0 0 674 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="사진이 성적표로">
+      <!-- photo with magnifier -->
+      <rect x="16" y="24" width="180" height="150" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <path d="M28 158 L74 96 L98 126 L124 88 L188 158 Z" fill="#FFFFFF" stroke="#2563EB" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="150" cy="62" r="14" fill="#B9CDF2"/>
+      <circle cx="52" cy="60" r="17" fill="none" stroke="#2563EB" stroke-width="2.5"/>
+      <line x1="64" y1="73" x2="74" y2="83" stroke="#2563EB" stroke-width="3" stroke-linecap="round"/>
+      <text x="106" y="200" text-anchor="middle" font-size="14" fill="#5B6B82">사진을 살짝 관찰</text>
+      <line x1="212" y1="110" x2="252" y2="110" stroke="#2563EB" stroke-width="3"/>
+      <path d="M252 110 l-11 -6.5 v13 z" fill="#2563EB"/>
+      <!-- report card -->
+      <rect x="266" y="16" width="392" height="180" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <rect x="266" y="16" width="392" height="34" rx="12" fill="#EFF6FF"/>
+      <text x="284" y="39" font-size="14.5" font-weight="700" fill="#1D4ED8">사진 성적표 (17개 숫자)</text>
+      <g font-size="14" fill="#1E293B">
+        <text x="284" y="78">색 종류</text>
+        <text x="470" y="78" fill="#5B6B82">15가지 — 적음</text>
+        <text x="284" y="104">잡음</text>
+        <text x="470" y="104" fill="#5B6B82">거의 없음</text>
+        <text x="284" y="130">선의 밀도</text>
+        <text x="470" y="130" fill="#5B6B82">높음 (디테일 많음)</text>
+        <text x="284" y="156">배경</text>
+        <text x="470" y="156" fill="#5B6B82">고른 색 한 가지</text>
+        <text x="284" y="182">투명 배경</text>
+        <text x="470" y="182" fill="#5B6B82">없음 · 외 12개 항목</text>
+      </g>
+      <g stroke="#DBE4F0"><line x1="282" y1="88" x2="642" y2="88"/><line x1="282" y1="114" x2="642" y2="114"/><line x1="282" y1="140" x2="642" y2="140"/><line x1="282" y1="166" x2="642" y2="166"/></g>
+      <text x="462" y="222" text-anchor="middle" font-size="13.5" fill="#5B6B82">성적표의 이름은 ImageFeatures — 이것이 모델이 보는 유일한 입력입니다</text>
+    </svg>
+  </figure>
+  <div class="card">
+    <span class="tag">왜 이렇게 하나요?</span>
+    <p style="margin:6px 0 0;">작은 두뇌에게 사진 원본을 주면 버거워하지만, <strong>17개 숫자</strong>라면 금방 이해합니다.
+    성적표는 사람이 읽어도 이해할 수 있어서, 나중에 "왜 이 설정을 골랐는지"를 함께 볼 수 있는 것도 장점입니다.</p>
+  </div>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>3 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 4 · 2단계 답안지 ═══════════════ -->
+<div class="page">
+  <p class="kicker">3 · 적용 방식 — 2단계</p>
+  <h2>14칸짜리 "빈칸 채우기 답안지"를 채웁니다</h2>
+  <p class="lead">vtracer는 Needle3에게 빈 답안지를 주고 성적표를 보고 채우라고 합니다.
+  각 칸마다 <strong>허용 범위</strong>가 인쇄되어 있어서(예: 색 정밀도는 1~8) 답안지 형식 자체가 답을 지켜 줍니다.</p>
+  <p>이 답안지 양식을 <strong>JSON 스키마</strong>라고 부릅니다. Needle3는 문법 검사기가 붙은 모델이라
+  형식에 맞지 않는 답을 쓰는 것이 원천적으로 불가능합니다.</p>
+  <figure>
+    <svg viewBox="0 0 674 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="설정 답안지">
+      <rect x="60" y="14" width="554" height="252" rx="14" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <rect x="60" y="14" width="554" height="40" rx="14" fill="#EFF6FF"/>
+      <text x="82" y="41" font-size="16" font-weight="700" fill="#1D4ED8">설정 답안지 — 빈칸을 채워 주세요</text>
+      <text x="594" y="41" text-anchor="end" font-size="13" fill="#5B6B82">허용 범위</text>
+      <g font-size="14.5" fill="#1E293B">
+        <text x="82" y="88">① 분할 방식 (clustering)</text>
+        <text x="82" y="120">② 색 정밀도</text>
+        <text x="82" y="152">③ 잡점 제거 크기</text>
+        <text x="82" y="184">④ 코너 판정 각도</text>
+        <text x="82" y="216">⑤ 최대 색 수 (선택)</text>
+        <text x="82" y="248">⑥ 곡선 다듬기 (선택)</text>
+      </g>
+      <g font-size="14.5" font-weight="700" fill="#1D4ED8">
+        <text x="420" y="88">color-cluster</text>
+        <text x="420" y="120">8</text>
+        <text x="420" y="152">8px</text>
+        <text x="420" y="184">120°</text>
+        <text x="420" y="216">비움</text>
+        <text x="420" y="248">비움</text>
+      </g>
+      <g font-size="13" fill="#5B6B82">
+        <text x="594" y="88" text-anchor="end">3가지 중 택1</text>
+        <text x="594" y="120" text-anchor="end">1 ~ 8</text>
+        <text x="594" y="152" text-anchor="end">0 ~ 128</text>
+        <text x="594" y="184" text-anchor="end">0 ~ 180</text>
+        <text x="594" y="216" text-anchor="end">2 ~ 64 또는 비움</text>
+        <text x="594" y="248" text-anchor="end">0.1 ~ 10 또는 비움</text>
+      </g>
+      <g stroke="#C7D9F7" stroke-dasharray="3 4">
+        <line x1="410" y1="82" x2="530" y2="82"/><line x1="410" y1="114" x2="446" y2="114"/><line x1="410" y1="146" x2="446" y2="146"/><line x1="410" y1="178" x2="452" y2="178"/>
+      </g>
+      <!-- rationale + confidence strip -->
+      <rect x="60" y="278" width="554" height="14" fill="none"/>
+    </svg>
+  </figure>
+  <div class="card">
+    <span class="tag">답과 함께 적어 주는 두 가지</span>
+    <p style="margin:6px 0 0;"><strong>근거(rationale)</strong> — "잡음이 적고 색이 15가지뿐이라 평면 그림으로 판단했습니다" 같은 한 줄 이유.
+    <strong>자신감(confidence)</strong> — 0~100% 숫자로, 이 판단이 얼마나 확실한지 표시합니다. 앱 화면에 그대로 보여 줍니다.</p>
+  </div>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>4 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 5 · 3단계 안전 대조 ═══════════════ -->
+<div class="page">
+  <p class="kicker">4 · 적용 방식 — 3단계</p>
+  <h2>적용 전에 "안전 대조"를 거칩니다</h2>
+  <p class="lead">모델의 답을 그대로 믿지 않습니다. vtracer 안에는 성적표만으로 답안지를 만드는
+  <strong>규칙 도우미(휴리스틱)</strong>가 상시 대기 중이고, 모델 답과 <strong>한 칸씩 대조</strong>합니다.</p>
+  <ul>
+    <li>모델이 <strong>비운 칸</strong> → 규칙 도우미의 값으로 채웁니다.</li>
+    <li>모델이 <strong>범위를 벗어난 답</strong>(예: 1~8인데 99) → 한계값(8)으로 잘라 냅니다. 이것을 <strong>클램프</strong>라고 합니다.</li>
+    <li>고친 부분이 있으면 <strong>수복 표시</strong>를 남겨 나중에 확인할 수 있습니다.</li>
+  </ul>
+  <figure>
+    <svg viewBox="0 0 674 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="안전 대조">
+      <!-- model column -->
+      <rect x="20" y="26" width="200" height="160" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <text x="120" y="54" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">Needle3의 답안지</text>
+      <g font-size="14" fill="#1E293B">
+        <text x="40" y="92">색 정밀도 <tspan font-weight="700" fill="#1D4ED8">99</tspan></text>
+        <text x="40" y="124">잡점 제거 <tspan font-weight="700" fill="#1D4ED8">8px</tspan></text>
+        <text x="40" y="156">최대 색 수 <tspan fill="#5B6B82">(빈 칸)</tspan></text>
+      </g>
+      <!-- rule column -->
+      <rect x="454" y="26" width="200" height="160" rx="12" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <text x="554" y="54" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">규칙 도우미의 정답지</text>
+      <g font-size="14" fill="#1E293B">
+        <text x="474" y="92">색 정밀도 <tspan font-weight="700" fill="#1D4ED8">8</tspan></text>
+        <text x="474" y="124">잡점 제거 <tspan font-weight="700" fill="#1D4ED8">8px</tspan></text>
+        <text x="474" y="156">최대 색 수 <tspan font-weight="700" fill="#1D4ED8">24</tspan></text>
+      </g>
+      <!-- middle checks -->
+      <g font-size="14" font-weight="700" fill="#1D4ED8">
+        <text x="337" y="92" text-anchor="middle">99 → 8 잘라 냄</text>
+        <text x="337" y="124" text-anchor="middle">그대로 통과</text>
+        <text x="337" y="156" text-anchor="middle">정답지로 채움</text>
+      </g>
+      <g stroke="#2563EB" stroke-width="2.5">
+        <line x1="222" y1="87" x2="262" y2="87"/><line x1="222" y1="119" x2="262" y2="119"/><line x1="222" y1="151" x2="262" y2="151"/>
+        <line x1="412" y1="87" x2="452" y2="87"/><line x1="412" y1="119" x2="452" y2="119"/><line x1="412" y1="151" x2="452" y2="151"/>
+      </g>
+      <g fill="#2563EB">
+        <path d="M262 87 l-10 -6 v12 z"/><path d="M452 87 l-10 -6 v12 z"/>
+        <path d="M262 119 l-10 -6 v12 z"/><path d="M452 119 l-10 -6 v12 z"/>
+        <path d="M262 151 l-10 -6 v12 z"/><path d="M452 151 l-10 -6 v12 z"/>
+      </g>
+      <!-- clamp gauge -->
+      <rect x="20" y="208" width="634" height="30" rx="8" fill="#EFF6FF"/>
+      <text x="40" y="228" font-size="13.5" fill="#5B6B82">허용 범위 1~8</text>
+      <line x1="180" y1="223" x2="600" y2="223" stroke="#C7D9F7" stroke-width="6" stroke-linecap="round"/>
+      <line x1="180" y1="223" x2="330" y2="223" stroke="#2563EB" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="180" cy="223" r="7" fill="#FFFFFF" stroke="#2563EB" stroke-width="3"/>
+      <circle cx="330" cy="223" r="7" fill="#FFFFFF" stroke="#2563EB" stroke-width="3"/>
+      <text x="172" y="207" text-anchor="middle" font-size="13" fill="#5B6B82">1</text>
+      <text x="330" y="207" text-anchor="middle" font-size="13" font-weight="700" fill="#1D4ED8">8 (한계)</text>
+      <text x="430" y="207" font-size="13" fill="#5B6B82">99는 범위 밖 → 8로 잘라 냄</text>
+    </svg>
+  </figure>
+  <div class="card">
+    <span class="tag">결과</span>
+    <p style="margin:6px 0 0;">변환기(주방)에는 <strong>항상 올바른 범위의 설정 값만</strong> 도착합니다.
+    모델이 실수해도 최악의 답은 "규칙 도우미 수준"이 될 뿐, 엉터리 변환이 나올 수 없습니다.</p>
+  </div>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>5 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 6 · 따라하기 (앱) ═══════════════ -->
+<div class="page">
+  <p class="kicker">5 · 따라하기 — 데스크톱 앱</p>
+  <h2>네 걸음이면 끝입니다</h2>
+  <div class="steps" style="margin-top:18px;">
+    <div class="st">
+      <div class="n">1</div>
+      <div class="t"><b>사진을 불러옵니다</b>
+      왼쪽 패널의 <span class="accent">파일 선택</span>을 누르거나 사진을 창으로 끌어다 놓으세요.
+      <span class="see">→ 화면에 사진이 나타나면 성공입니다.</span></div>
+    </div>
+    <div class="st">
+      <div class="n">2</div>
+      <div class="t"><b>목표를 고릅니다</b>
+      AI 자동 섹션에서 <span class="accent">균형</span>(기본) / <span class="accent">충실</span>(디테일 우선) /
+      <span class="accent">경량</span>(파일 크기 우선) 중 하나를 누르세요.
+      <span class="see">→ 선택한 버튼에 테두리가 생기면 성공입니다.</span></div>
+    </div>
+    <div class="st">
+      <div class="n">3</div>
+      <div class="t"><b>"분석 후 적용"을 누릅니다</b>
+      잠깐 분석한 뒤 슬라이더들이 저절로 움직이고, 변환 결과가 바로 갱신됩니다.
+      <span class="see">→ 섹션 아래에 도우미 이름 · 자신감 % · 판단 이유가 표시되면 성공입니다.</span></div>
+    </div>
+    <div class="st">
+      <div class="n">4</div>
+      <div class="t"><b>Needle3 두뇌는 이미 앱 안에 있습니다</b>
+      앱에 번들된 Needle3 모델(약 35MB)이 첫 분석 때 자동으로 준비되어 실행됩니다 — 서버 설치가 필요 없습니다.
+      설정 → <span class="accent">AI 판단 엔진</span>에서 서버 연결이나 규칙 전용으로 바꿀 수도 있습니다.
+      <span class="see">→ 기본값 "내장"을 그대로 두면 됩니다.</span></div>
+    </div>
+  </div>
+  <figure>
+    <svg viewBox="0 0 674 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="앱 화면에서 AI 자동 위치">
+      <!-- app window -->
+      <rect x="20" y="18" width="634" height="196" rx="12" fill="#FFFFFF" stroke="#C7D9F7"/>
+      <rect x="20" y="18" width="634" height="26" rx="12" fill="#F1F5F9"/>
+      <circle cx="38" cy="31" r="4" fill="#C7D9F7"/><circle cx="52" cy="31" r="4" fill="#C7D9F7"/><circle cx="66" cy="31" r="4" fill="#C7D9F7"/>
+      <!-- left panel -->
+      <rect x="34" y="56" width="180" height="144" rx="8" fill="#F4F8FE" stroke="#DBE4F0"/>
+      <rect x="46" y="70" width="156" height="58" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+      <text x="124" y="93" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1D4ED8">AI 자동</text>
+      <g font-size="12.5" fill="#1D4ED8" font-weight="700">
+        <text x="60" y="113">균형</text><text x="104" y="113">충실</text><text x="146" y="113">경량</text>
+      </g>
+      <rect x="46" y="138" width="156" height="24" rx="12" fill="#2563EB"/>
+      <text x="124" y="154" text-anchor="middle" font-size="12.5" font-weight="700" fill="#FFFFFF">분석 후 적용</text>
+      <text x="124" y="188" text-anchor="middle" font-size="12" fill="#5B6B82">자신감 82% · 이유 한 줄</text>
+      <!-- sliders -->
+      <g stroke="#C7D9F7" stroke-width="5" stroke-linecap="round">
+        <line x1="248" y1="86" x2="600" y2="86"/><line x1="248" y1="126" x2="600" y2="126"/><line x1="248" y1="166" x2="600" y2="166"/>
+      </g>
+      <g fill="#2563EB">
+        <circle cx="430" cy="86" r="9"/><circle cx="540" cy="126" r="9"/><circle cx="330" cy="166" r="9"/>
+      </g>
+      <text x="248" y="70" font-size="12.5" fill="#5B6B82">설정 슬라이더 14개 — AI가 움직여 줍니다 (언제든 손으로 다시 조정 가능)</text>
+      <g stroke="#2563EB" stroke-width="2.5" stroke-dasharray="5 4" fill="none">
+        <path d="M430 106 q-20 20 -8 46" marker-end="url(#arr)"/>
+      </g>
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="#2563EB"/>
+        </marker>
+      </defs>
+      <text x="630" y="206" text-anchor="end" font-size="12" fill="#5B6B82">결과 미리보기</text>
+    </svg>
+  </figure>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>6 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 7 · CLI + 두 개의 두뇌 ═══════════════ -->
+<div class="page">
+  <p class="kicker">6 · 따라하기 — 명령줄과 두 개의 두뇌</p>
+  <h2>모델이 없어도 절대 멈추지 않습니다</h2>
+  <p class="lead">AI 자동 모드에는 <strong>두뇌가 두 개</strong> 있고, Needle3는 앱 안에
+  <strong>내장</strong>되어 함께 배포됩니다. 기본 설정에서는 내장 Needle3가 판단하고
+  규칙 도우미가 답을 검사합니다. 모델을 사용할 수 없거나 모델이 답을 포기하면
+  <strong>자동으로 규칙 도우미가 대신</strong>합니다 — 기능이 실패로 끝나지 않습니다.</p>
+  <figure>
+    <svg viewBox="0 0 674 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="두 개의 두뇌">
+      <rect x="30" y="40" width="190" height="120" rx="14" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+      <circle cx="125" cy="82" r="22" fill="#FFFFFF" stroke="#2563EB" stroke-width="2.5"/>
+      <text x="125" y="88" text-anchor="middle" font-size="16" font-weight="700" fill="#1D4ED8">규</text>
+      <text x="125" y="126" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1E293B">규칙 도우미 (내장)</text>
+      <text x="125" y="146" text-anchor="middle" font-size="12.5" fill="#5B6B82">오프라인 · 즉시 · 항상 대기</text>
+      <rect x="454" y="40" width="190" height="120" rx="14" fill="#F4F8FE" stroke="#C7D9F7"/>
+      <circle cx="549" cy="82" r="22" fill="#FFFFFF" stroke="#2563EB" stroke-width="2.5"/>
+      <text x="549" y="88" text-anchor="middle" font-size="16" font-weight="700" fill="#1D4ED8">N3</text>
+      <text x="549" y="126" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1E293B">Needle3 (앱 내장 두뇌)</text>
+      <text x="549" y="146" text-anchor="middle" font-size="12.5" fill="#5B6B82">모델 파일이 앱과 함께 배포됨</text>
+      <!-- upper path: embedded model decides -->
+      <line x1="224" y1="70" x2="450" y2="70" stroke="#2563EB" stroke-width="2.5"/>
+      <text x="337" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#1D4ED8">기본: Needle3가 답 → 도우미가 검사</text>
+      <!-- lower path: fallback -->
+      <text x="337" y="146" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">모델 불가 · 포기: 도우미가 혼자 판단</text>
+      <path d="M224 150 q113 44 226 0" stroke="#2563EB" stroke-width="2.5" fill="none" stroke-dasharray="6 5"/>
+      <text x="337" y="196" text-anchor="middle" font-size="13" fill="#5B6B82">어느 쪽이든 답안지는 같은 안전 대조를 거칩니다</text>
+    </svg>
+  </figure>
+  <h3>명령줄(CLI)에서 한 줄로 쓰기</h3>
+  <code class="cmd">vtracer --preset ai 사진.jpg 결과.svg&nbsp;&nbsp;<span class="cm"># 내장 규칙으로 자동 판단</span><br>
+  vtracer --preset ai --ai-goal compact 사진.jpg 결과.svg&nbsp;&nbsp;<span class="cm"># 파일을 더 작게</span><br>
+  vtracer --preset ai --needle3 http://127.0.0.1:8080/run 사진.jpg 결과.svg&nbsp;&nbsp;<span class="cm"># Needle3 서버 사용</span></code>
+  <p class="muted" style="margin-top:10px;">--ai-goal 값: <b>balanced</b>(균형) · <b>faithful</b>(충실) · <b>compact</b>(경량). 모델 호출이 실패하면 규칙 도우미로 자동 전환됩니다.</p>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서</span><span>7 / 8</span></div>
+</div>
+
+<!-- ═══════════════ PAGE 8 · 문제 해결 + 용어 사전 ═══════════════ -->
+<div class="page">
+  <p class="kicker">7 · 문제가 생겼을 때</p>
+  <h2>증상과 해결</h2>
+  <table class="trouble">
+    <tr><th style="width:38%;">증상</th><th>이렇게 해보세요</th></tr>
+    <tr>
+      <td>"분석 후 적용" 버튼이 회색으로 눌리지 않아요</td>
+      <td>이미지를 먼저 불러오세요. 버튼은 사진이 열려 있을 때만 눌립니다.</td>
+    </tr>
+    <tr>
+      <td>"AI 자동 분석 실패"라는 메시지가 나와요</td>
+      <td>Needle3 서버 주소가 잘못되었을 수 있습니다. 설정에서 주소를 <b>비우고</b> 다시 누르면 내장 규칙으로 정상 동작합니다.</td>
+    </tr>
+    <tr>
+      <td>자신감이 낮게(예: 60%) 나와요</td>
+      <td>사진 성격이 평범하지 않다는 뜻입니다. 목표를 <b>충실</b> 또는 <b>경량</b>으로 바꿔 다시 분석해 보세요.</td>
+    </tr>
+    <tr>
+      <td>결과가 마음에 안 들어요</td>
+      <td>AI의 답은 훌륭한 <b>출발점</b>일 뿐입니다. 목표를 바꿔 다시 돌리거나, 슬라이더를 조금 손보면 됩니다.</td>
+    </tr>
+  </table>
+
+  <p class="kicker" style="margin-top:34px;">8 · 용어 사전</p>
+  <h2>어려운 말, 쉬운 말</h2>
+  <div class="gloss">
+    <div class="g"><b>비트맵 / 벡터(SVG)</b><br><span>비트맵은 칸칸이 색칠한 모자이크, 벡터는 선과 곡선으로 된 그림입니다. 벡터는 아무리 키워도 각지지 않습니다.</span></div>
+    <div class="g"><b>모델</b><br><span>학습으로 만든 작은 AI 두뇌입니다. Needle3는 앱에 내장되어 인터넷 없이도 실행됩니다.</span></div>
+    <div class="g"><b>피처 (성적표)</b><br><span>사진을 요약한 17개의 숫자입니다. 색 종류, 잡음, 선 밀도 등이 적힙니다.</span></div>
+    <div class="g"><b>JSON 스키마 (답안지 양식)</b><br><span>칸과 허용 범위가 정해진 빈칸 채우기 양식입니다. 모델이 형식을 벗어난 답을 못 하게 막습니다.</span></div>
+    <div class="g"><b>휴리스틱 (규칙 도우미)</b><br><span>"잡음이 적으면 잡점을 조금만 지운다" 같은 경험 규칙으로 판단하는 내장 두뇌입니다.</span></div>
+    <div class="g"><b>클램프</b><br><span>범위를 벗어난 답을 한계값으로 잘라 내는 안전장치입니다. 99를 1~8 범위에 맞추면 8이 됩니다.</span></div>
+  </div>
+  <div class="footer"><span>VTracer AI 자동 모드 사용 설명서 · 자세한 기술 문서는 docs/ai_auto/ 폴더</span><span>8 / 8</span></div>
+</div>
+
+</body>
+</html>
