@@ -108,9 +108,9 @@ ColorImage ──▶ FeatureExtractor ──▶ ImageFeatures ──┬─▶ He
                     │                               └─▶ Needle3DecisionEngine ────┘     │       │
                     │                                      │                            │       │
                     │                          Needle3Runtime (플러그형)                 ▼       │
-                    │                          ├─ Needle3HttpRuntime (needle --serve)   VtracerConfig
-                    │                          ├─ Needle3ProcessRuntime (needle CLI)        │
-                    │                          └─ C-API FFI (모바일, 확장 지점)              ▼
+                    │                          ├─ Needle3EmbeddedRuntime (앱 내장)    VtracerConfig
+                    │                          ├─ Needle3HttpRuntime (needle --serve)   │
+                    │                          └─ Needle3ProcessRuntime (needle CLI)     ▼
                     └──────────────────────────────────────────────────────  Pipeline ──▶ SVG
 ```
 
@@ -144,6 +144,8 @@ ColorImage ──▶ FeatureExtractor ──▶ ImageFeatures ──┬─▶ He
 | 결정 모델·클램프 | `vtracer_ai/lib/src/decision.dart` (`AiDecision`, `TuningGoal`) |
 | 휴리스틱 엔진 | `vtracer_ai/lib/src/engine.dart` |
 | Needle3 런타임·엔진 | `vtracer_ai/lib/src/needle3.dart` (`Needle3HttpRuntime`, `Needle3ProcessRuntime`, `Needle3DecisionEngine`) |
+| Needle3 내장 번들 | `vtracer_ai/lib/src/needle3_embedded.dart` (`Needle3EmbeddedRuntime`, `Needle3BundleInstaller`) + 각 앱 자산 |
+| chooser 엔진 (내장 기본) | `vtracer_ai/lib/src/needle3_candidate.dart` (`Needle3CandidateEngine` — 후보 3개 중 모델 선택) |
 | 오케스트레이션 | `vtracer_ai/lib/src/autotune.dart` (`AutoTuner`, `TuningResult`) |
 | CLI | `vtracer_cli/bin/vtracer.dart` (`--preset ai`, `--ai-goal`, `--needle3`) |
 | 앱 UI | `vtracer_app` 옵션 패널 "AI 자동" 섹션 + 설정의 Needle3 엔드포인트 |

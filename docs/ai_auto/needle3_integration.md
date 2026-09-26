@@ -50,13 +50,20 @@ vtracer --preset ai --needle3 C:\models\needle3.cact photo.jpg out.svg
 모델 호출 실패/타임아웃 시 자동으로 휴리스틱으로 폴백하며, 모델 출력이 스키마 범위를
 벗어나면 클램프 + `needle3Repaired` 표시가 된다(로그의 `engine=`/`repaired` 확인).
 
-### 1-3. Flutter 앱 (vtracer_app)
+### 1-3. Flutter 앱 (vtracer_app) — Needle3 내장
 
-1. **설정 → Needle3 엔드포인트**에 `needle --serve` 주소(예: `http://127.0.0.1:8080/run`)를
-   넣는다. 비워 두면 내장 휴리스틱으로 동작(기본값, 오프라인).
+1. **설정 → AI 판단 엔진**이 기본값 **내장**이면 별도 준비가 전혀 필요 없습니다:
+   앱에 번들된 Needle3 엔진(`needle.exe`)과 모델(`needle3.cact`, 35MB)이 첫
+   분석 시 앱 데이터 디렉터리에 자동 추출되어 실행됩니다.
+   고급 옵션으로 **서버**(실행 중인 `needle --serve` 주소 입력)와
+   **규칙**(오프라인 내장 규칙만)을 선택할 수 있습니다.
 2. 왼쪽 패널 **AI 자동** 섹션에서 목표(균형/충실/경량)를 고르고 **분석 후 적용** 클릭.
 3. 패널의 모든 슬라이더가 결정값으로 움직이고 즉시 변환 결과가 갱신된다. 섹션 하단에
    엔진·신뢰도·판단 근거가 표시된다.
+
+Android 앱(vtracer_android)도 동일하게 내장 Needle3를 기본 사용한다 — 엔진은
+`jniLibs/arm64-v8a/libneedle.so`, 모델은 자산에서 추출한다. 두 앱 모두 모델이
+사용 불가능하면 내장 규칙으로 자동 전환된다.
 
 ## 2. Needle3 serve 모드 (HTTP) — 권장 경로
 
@@ -105,36 +112,69 @@ final result = await AutoTuner(engine).tune(image, goal: TuningGoal.compact);
 
 ## 3. 플랫폼별 임베딩 매트릭스
 
-| 플랫폼 | 경로 | 비고 |
+Cactus는 플랫폼 폴더마다 **정적 라이브러리(`libneedle.a`) + 독립 실행 엔진
+(`needle`/`needle.exe`, ~1.2MB)**만 배포한다 — 로더블 공유 라이브러리(.so/.dll)는
+없다. 따라서 Dart FFI(`DynamicLibrary.open`)는 불가능하고, "내장"은
+**엔진 실행 파일 + `needle3.cact` 모델을 앱 자산으로 휴대하고 런타임에 추출·실행**
+하는 방식으로 구현된다. vtracer_ai의 `Needle3EmbeddedRuntime`과
+`Needle3BundleInstaller`가 이 경로를 담당하며, 별도 서버나 수동 설치가 필요 없다.
+
+| 플랫폼 | 내장 방식 | 상태 |
 |---|---|---|
-| Windows / macOS / Linux (CLI·앱) | `Needle3ProcessRuntime`(needle CLI) 또는 `Needle3HttpRuntime`(serve) | 프로세스 1회 기동, 상시 serve 권장 |
-| Android / iOS | **C API FFI 바인딩**(아래) | 플랫폼 엔진 <1MB를 앱에 포함 |
-| Web (Flutter web) | serve 프록시 | 브라우저 WASM 엔진은 모델 카드의 browser 데모 참조 |
+| Windows (데스크톱 앱·CLI) | `needle.exe` + 모델을 자산으로 번들 → 첫 사용 시 앱 데이터 디렉터리에 추출 → `Needle3EmbeddedRuntime`(자식 프로세스) | **구현됨** (`apps/vtracer_app/assets/needle3/`) |
+| Android | 엔진을 `jniLibs/arm64-v8a/libneedle.so`로 패키징(nativeLibraryDir에서만 실행 가능) + 모델 자산 추출 → 같은 런타임 | **구현됨** (`apps/vtracer_android`) |
+| macOS / Linux | 실행 엔진은 존재(`macos-arm64/needle`, `linux-x86_64/needle`) — 데스크톱 앱이 대상 플랫폼용 엔진 자산을 추가하면 즉시 확장 가능 | 미번들 (폴백: 휴리스틱) |
+| iOS / Web | 미대응 (폴백: 휴리스틱) | 미번들 |
 
-### 3-1. 모바일 C API FFI 바인딩 (확장 지점)
+모든 내장 경로는 실패 시(엔진 부재·실행 오류·모델 중단) `Needle3Exception` →
+내장 휴리스틱으로 자동 폴백한다. AI 자동 모드 자체가 실패로 끝나지 않는다.
 
-Cactus 저장소의 플랫폼 폴더에 C API 헤더와 엔진 바이너리가 있다. 새 런타임은
-`Needle3Runtime`을 구현하면 되고, 다른 코드는 전혀 바뀌지 않는다:
+### 3-1. 임베디드 엔진 설계 (compact + chooser) — 실측 기반
 
-```dart
-class Needle3FfiRuntime implements Needle3Runtime {
-  // 1) 플랫폼 엔진 dylib 로드 (android: jniLibs, ios: frameworks)
-  // 2) needle_init(model_path, tools_json) → 정적 프리픽스 토큰 수 확인
-  // 3) needle_run(system, prompt) → JSON 버퍼
-  // 4) parseNeedle3Answer(jsonDecode(buffer))로 마무리
-  @override
-  Future<Needle3Answer> run(Needle3Invocation invocation) async {
-    final json = _needleRun(invocation.system, invocation.prompt);
-    return parseNeedle3Answer(jsonDecode(json));
-  }
-}
+베이스 121M 모델은 프롬프트 접두사가 무거워지면 반복 루프에 빠져 토큰 예산을
+소진한다(`tool call truncated: token budget exhausted`). 실측 결과:
 
-final tuner = AutoTuner(Needle3DecisionEngine(runtime: Needle3FfiRuntime()));
+| 프롬프트 구성 | 결과 |
+|---|---|
+| 전체 시스템 프롬프트 + 설명 포함 스키마 + 개행 페이로드 | **실패** (반복 루프, `--max 1024`로도 소진) |
+| 3문장 시스템 프롬프트 + **설명 없는 스키마** + **한 줄 페이로드** | 16필드 호출 완성 — 단, 실제 이미지에서 (a) 툴 호출 생략(`type: respond`), (b) 반복 루프, (c) 그라운딩 억제가 관측됨 |
+| **후보 선택(chooser)**: 휴리스틱 후보 3개 제시 → 모델이 `choose_candidate(choice: A\|B\|C)` 하나만 반환 | **안정적으로 디스패치됨** (실측 5/5, 신뢰도 0.48–0.85) |
+
+그래서 내장 경로의 실제 설계는 **chooser 방식**이다
+(`Needle3CandidateEngine`): 휴리스틱이 라인아트/평면/사진 3개의 완결된 후보
+프로파일을 만들고, 모델은 피처에 가장 맞는 후보의 글자를 고른다. 선택된 후보는
+이미 검증·클램프된 `AiDecision`이므로 병합 없이 바로 유효하다.
+
+추가 실측: 베이스 모델의 선택에는 **글자 편향**이 있다(내용과 무관하게 'C'를
+고른다). `Needle3CandidateEngine`은 기본으로 이미지 피처 해시에서 유도한
+결정적 오프셋으로 **후보 내용을 글자 뒤에서 회전**시켜(`rotateCandidates`),
+편향이 특정 프로파일에 고정되는 것을 막는다. 내용 기반 선택 품질은 §5
+파인튜닝의 역할이다.
+
+또한 엔진의 **그라운딩 검증**이 입력에 근거 없는 값으로 판단한 호출을 자동
+억제한다(`success: true, function_calls: [], suppressed_calls: [...]`).
+이는 모델 카드 명세("환각 대신 빈 목록 반환")대로의 안전 동작이며, vtracer_ai는
+이를 **중단(abstention)** 으로 처리해 휴리스틱 폴백으로 넘긴다.
+
+엔진 CLI의 실제 계약 (`needle --help` 확인치):
+
+```text
+needle --model needle3.cact --tools tools.json --system system.txt
+       --prompt "..." [--serve] [--max N] [--threads N] [--tool-index path]
+- --system: 인라인 문자열이 아니라 파일 경로
+- --max: 응답 토큰 상한(기본 512); 내장 경로는 1024 사용
+- 출력: {"type":"call"|"respond","success":bool,"function_calls":[...],
+         "reasoning":...,"confidence":...}
+- 호출 생략/실패 시 function_calls가 비거나 success:false
 ```
 
-주의: 모델 카드 기준 `needle_init`이 정적 프리픽스(시스템 프롬프트 + 도구 스키마)의
-토큰 수를 반환하고 컨텍스트 초과 시 실패한다. 도구 스키마는 이미 최소화되어 있지만
-시스템 프롬프트를 늘릴 때는 이 값을 확인할 것.
+### 3-2. C API (참고용)
+
+엔진을 프로세스 내로 가져오려면 `libneedle.a`에서 공유 라이브러리를 직접
+빌드해야 한다(`needle.h`: `needle_load(bytes)` → `needle_init(system,
+tools, tool_index_path)` → `needle_complete(input, max_new_tokens, out,
+cap)`; 프로세스 전역·비스레드 세이프). vtracer_ai는 이 경로를 지원하지 않으며,
+공유 라이브러리가 공식 배포되면 `Needle3Runtime` 구현체 하나로 추가하면 된다.
 
 ## 4. 판단 템플릿 관리
 
@@ -160,6 +200,8 @@ final tuner = AutoTuner(Needle3DecisionEngine(runtime: Needle3FfiRuntime()));
 |---|---|
 | `Needle3Exception: endpoint returned HTTP ...` | serve 프로세스 미기동/포트 불일치 — 앱은 자동으로 휴리스틱 폴백 |
 | 응답 파싱 실패 | serve 응답 필드명 차이 — `parseNeedle3Answer`의 키 후보에 추가 |
+| `model abstained: no tool call dispatched` | 엔진 그라운딩 검증이 호출을 억제(베이스 모델의 정상 동작) — 휴리스틱 폴백, §5 파인튜닝으로 개선 |
+| `model choice is not one of A/B/C` | chooser 응답의 글자가 유효하지 않음 — 휴리스틱 폴백 |
 | 결정이 항상 `needle3Repaired` | 모델이 필수 필드를 누락·범위 이탈 — 시스템 프롬프트/스키마 확인, 로그로 드리프트 추적 |
-| `needle_init` 실패 (모바일 FFI) | 정적 프리픽스(시스템 프롬프트+스키마)가 컨텍스트 초과 — 프롬프트 축소 |
-| 모델 호출이 느림 | `.cact` 레이어 수 줄이기(`--layers`), serve 상시 기동, 피처 페이로드는 이미 수백 토큰으로 최소화됨 |
+| `tool call truncated: token budget exhausted` | 프롬프트 접두사가 무거워 모델이 반복 루프 진입 — compact/chooser 프로파일 사용(내장 경로 기본), `--max` 상향 |
+| 내장 모델이 실행 안 됨 (앱) | 엔진/모델 자산 미번들 플랫폼(macOS·Linux·Web) — 휴리스틱으로 동작, §3 매트릭스 참조 |
