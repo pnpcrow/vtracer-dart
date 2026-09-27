@@ -276,8 +276,15 @@ class AppState extends ChangeNotifier {
 
       TuningResult result;
       try {
-        result =
-            await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
+        // If the user explicitly picked B/W, the auto mode tunes the binary
+        // profile instead of switching families.
+        final base = _config();
+        result = await AutoTuner(engine).tune(
+          image,
+          goal: aiGoal,
+          base: base,
+          preserveBinary: base.clustering == Clustering.binary,
+        );
       } on Needle3Exception {
         // The model could not be used (runtime error, abstention or an
         // invalid choice) — the built-in heuristics take over.
