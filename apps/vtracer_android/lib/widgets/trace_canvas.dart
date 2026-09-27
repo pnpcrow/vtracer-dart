@@ -38,11 +38,27 @@ class _TraceCanvasState extends State<TraceCanvas> {
   /// the trace changes.
   String? _bakedSvg;
 
+  /// Preview raster cap, captured in [didChangeDependencies] — computing it
+  /// reads an inherited widget (View.of), which must not happen from
+  /// initState or its synchronous call chain.
+  ui.Size? _cap;
+
   @override
   void initState() {
     super.initState();
     widget.state.addListener(_onStateChanged);
-    _onStateChanged();
+    // Bake the preview for an already-loaded trace after the first frame:
+    // _onStateChanged uses the captured cap, and running it synchronously
+    // here would touch inherited widgets before initState completes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onStateChanged();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cap = previewCap(context);
   }
 
   @override
@@ -67,8 +83,8 @@ class _TraceCanvasState extends State<TraceCanvas> {
     // While a re-render is in flight the old trace stays visible; AppState
     // clears `svg` only when a new image is loaded.
     final svg = widget.state.svg;
-    if (svg != null && svg != _bakedSvg && mounted) {
-      final cap = previewCap(context);
+    final cap = _cap;
+    if (svg != null && svg != _bakedSvg && cap != null && mounted) {
       try {
         final raster = await rasterizeSvg(svg, cap);
         if (!mounted) {
