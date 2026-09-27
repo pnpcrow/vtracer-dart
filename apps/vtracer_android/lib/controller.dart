@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -272,9 +272,17 @@ class AppState extends ChangeNotifier {
 
       TuningResult result;
       try {
-        result =
-            await AutoTuner(engine).tune(image, goal: aiGoal, base: _config());
-      } on Needle3Exception {
+        // If the user explicitly picked B/W, the auto mode tunes the binary
+        // profile instead of switching families.
+        final base = _config();
+        result = await AutoTuner(engine).tune(
+          image,
+          goal: aiGoal,
+          base: base,
+          preserveBinary: base.clustering == Clustering.binary,
+        );
+      } on Needle3Exception catch (e) {
+        debugPrint('needle3: falling back to built-in rules: $e');
         note ??= 'declined';
         result = await AutoTuner(HeuristicDecisionEngine())
             .tune(image, goal: aiGoal, base: _config());
@@ -323,17 +331,29 @@ class AppState extends ChangeNotifier {
     if (cached != null) return cached;
     try {
       final libDir = await AndroidIntents.nativeLibraryDir();
-      if (libDir == null) return null;
+      if (libDir == null) {
+        debugPrint('needle3: nativeLibraryDir unavailable (stale build?)');
+        return null;
+      }
+      final enginePath = '$libDir${Platform.pathSeparator}libneedle.so';
+      if (!File(enginePath).existsSync()) {
+        debugPrint('needle3: engine missing at $enginePath — was the APK '
+            'built with jniLibs legacy packaging?');
+        return null;
+      }
       final support = await getApplicationSupportDirectory();
       final runtime = await Needle3BundleInstaller.install(
         directory: '${support.path}${Platform.pathSeparator}needle3',
         readAsset: (name) async =>
             (await rootBundle.load('assets/needle3/$name')).buffer.asUint8List(),
-        enginePath: '$libDir${Platform.pathSeparator}libneedle.so',
+        enginePath: '$libDir/libneedle.so',
       );
+      debugPrint('needle3: embedded engine ready '
+          '(engine=$enginePath, model=${runtime.modelPath})');
       _embeddedNeedle3 = Needle3CandidateEngine(runtime: runtime);
       return _embeddedNeedle3;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('needle3: embedded engine unavailable: $e');
       return null;
     }
   }

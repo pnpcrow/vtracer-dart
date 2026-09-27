@@ -48,6 +48,10 @@ class AndroidIntents {
       return await _channel.invokeMethod<String>('getNativeLibraryDir');
     } on PlatformException {
       return null;
+    } on MissingPluginException {
+      // The host activity predates the getNativeLibraryDir handler (stale
+      // build) — the app must be rebuilt for the embedded engine.
+      return null;
     }
   }
 

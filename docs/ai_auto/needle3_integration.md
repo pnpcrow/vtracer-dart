@@ -122,7 +122,7 @@ Cactus는 플랫폼 폴더마다 **정적 라이브러리(`libneedle.a`) + 독�
 | 플랫폼 | 내장 방식 | 상태 |
 |---|---|---|
 | Windows (데스크톱 앱·CLI) | `needle.exe` + 모델을 자산으로 번들 → 첫 사용 시 앱 데이터 디렉터리에 추출 → `Needle3EmbeddedRuntime`(자식 프로세스) | **구현됨** (`apps/vtracer_app/assets/needle3/`) |
-| Android | 엔진을 `jniLibs/arm64-v8a/libneedle.so`로 패키징(nativeLibraryDir에서만 실행 가능) + 모델 자산 추출 → 같은 런타임 | **구현됨** (`apps/vtracer_android`) |
+| Android | 엔진을 `jniLibs/arm64-v8a/libneedle.so`로 패키징(nativeLibraryDir에서만 실행 가능) + 모델 자산 추출 → 같은 런타임. **필수 빌드 설정**: 최신 AGP 기본값(`extractNativeLibs=false`)에서는 `.so`가 APK 안에만 존재해 `nativeLibraryDir`에 나타나지 않으므로, `build.gradle.kts`에 `packaging { jniLibs { useLegacyPackaging = true; doNotStrip("**/libneedle.so") } }`가 필요하다 (미설정 시 스폰 실패 → 휴리스틱 폴백) | **구현됨** (`apps/vtracer_android`) |
 | macOS / Linux | 실행 엔진은 존재(`macos-arm64/needle`, `linux-x86_64/needle`) — 데스크톱 앱이 대상 플랫폼용 엔진 자산을 추가하면 즉시 확장 가능 | 미번들 (폴백: 휴리스틱) |
 | iOS / Web | 미대응 (폴백: 휴리스틱) | 미번들 |
 
@@ -141,15 +141,26 @@ Cactus는 플랫폼 폴더마다 **정적 라이브러리(`libneedle.a`) + 독�
 | **후보 선택(chooser)**: 휴리스틱 후보 3개 제시 → 모델이 `choose_candidate(choice: A\|B\|C)` 하나만 반환 | **안정적으로 디스패치됨** (실측 5/5, 신뢰도 0.48–0.85) |
 
 그래서 내장 경로의 실제 설계는 **chooser 방식**이다
-(`Needle3CandidateEngine`): 휴리스틱이 라인아트/평면/사진 3개의 완결된 후보
-프로파일을 만들고, 모델은 피처에 가장 맞는 후보의 글자를 고른다. 선택된 후보는
-이미 검증·클램프된 `AiDecision`이므로 병합 없이 바로 유효하다.
+(`Needle3CandidateEngine`): 휴리스틱이 **컬러 패밀리 후보**를 만들고, 모델은
+피처에 가장 맞는 후보의 글자를 고른다. 선택된 후보는 이미 검증·클램프된
+`AiDecision`이므로 병합 없이 바로 유효하다.
 
-추가 실측: 베이스 모델의 선택에는 **글자 편향**이 있다(내용과 무관하게 'C'를
-고른다). `Needle3CandidateEngine`은 기본으로 이미지 피처 해시에서 유도한
-결정적 오프셋으로 **후보 내용을 글자 뒤에서 회전**시켜(`rotateCandidates`),
-편향이 특정 프로파일에 고정되는 것을 막는다. 내용 기반 선택 품질은 §5
-파인튜닝의 역할이다.
+메뉴 정책 (중요):
+
+- **binary(문서/스캔) 프로파일은 자동 메뉴에서 의도적으로 제외**되어 있다.
+  이는 유일하게 본질적으로 파괴적인 후보(임계값보다 밝은 영역을 전부 폐기)라서,
+  글자 편향이 그쪽에 떨어지면 이미지가 외곽선만 남는 결과가 되기 때문이다.
+  binary는 명시적 B/W 모드와 [AutoTuner.tune]의 `preserveBinary`(사용자가
+  B/W를 고른 상태에서 AI가 패밀리를 바꾸지 않도록 함)로만 도달한다.
+- 자동 메뉴는 **컬러 패밀리 5종**이며 각각 적합성 조건을 통과한 것만 제시된다:
+  flat(항상) / line-illustration(밝은 배경 + 높은 에지 밀도 + 색채) /
+  gradient-illustration(평탄 다수 + 색채 + 저잡음) / photo(항상) /
+  pixel-icon(소형 + 소수 색). 메뉴가 비지 않도록 flat·photo는 무조건 후보.
+- **문서/스캔 직접 경로**: 거의 무채색 + 강한 이봉성 조건이면 모델을 거치지
+  않고 규칙이 binary를 직접 적용한다(`scanDirect`) — 모델은 내용을 볼 수
+  없으므로 이 판단은 규칙의 몫이다.
+- 클래스 내부 파라미터는 고정값이 아니라 피처에서 보간된다(예: photo의
+  filter_speckle ∝ noise, layer_difference ∝ mean_gradient).
 
 또한 엔진의 **그라운딩 검증**이 입력에 근거 없는 값으로 판단한 호출을 자동
 억제한다(`success: true, function_calls: [], suppressed_calls: [...]`).

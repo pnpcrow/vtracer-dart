@@ -35,6 +35,18 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    packaging {
+        jniLibs {
+            // The embedded Needle3 engine ships as jniLibs/arm64-v8a/libneedle.so
+            // and is executed from nativeLibraryDir. With the modern default
+            // (useLegacyPackaging = false) .so files stay inside the APK and
+            // are never materialized in nativeLibraryDir, so the engine could
+            // not be spawned. Legacy packaging extracts it as a real file.
+            useLegacyPackaging = true
+            doNotStrip("**/libneedle.so")
+        }
+    }
 }
 
 kotlin {
