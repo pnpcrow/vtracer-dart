@@ -65,10 +65,21 @@ class AutoTuner {
     ColorImage image, {
     TuningGoal goal = TuningGoal.balanced,
     VtracerConfig? base,
+    bool preserveBinary = false,
   }) async {
     final sw = Stopwatch()..start();
     final features = FeatureExtractor().extract(image);
-    final decision = (await engine.decide(features, goal)).clamped();
+    var decision = (await engine.decide(features, goal)).clamped();
+    if (preserveBinary && decision.clustering != Clustering.binary) {
+      // The user explicitly selected the B/W family: tune the binary
+      // profile for them instead of switching families out from under
+      // them.
+      final lineArt = HeuristicDecisionEngine().lineArtCandidate(features, goal);
+      decision = lineArt.withMeta(
+        rationale: 'binary kept from manual B/W selection — ${lineArt.rationale}',
+        source: DecisionSource.heuristic,
+      );
+    }
     final config = (base ?? VtracerConfig.defaultConfig()).clone();
     decision.applyTo(config);
     return TuningResult(

@@ -55,7 +55,8 @@ void main() {
     expect(d.maxColors, isNull);
   });
 
-  test('photo-like → coarse stacked layers', () async {
+  test('photo-like → coarse stacked layers (parameters interpolated from features)',
+      () async {
     final d = await engine.decide(
       const ImageFeatures(
         width: 1920, height: 1080, megapixels: 2.07, aspectRatio: 1.78,
@@ -67,8 +68,10 @@ void main() {
       TuningGoal.balanced,
     );
     expect(d.clustering, Clustering.colorCluster);
-    expect(d.filterSpeckle, 8);
-    expect(d.layerDifference, 48);
+    // Speckle interpolates with noise: (4/4) rounds to 1 → clamped to 4.
+    expect(d.filterSpeckle, 4);
+    // Gradient step interpolates with mean gradient: 18 * 2 = 36.
+    expect(d.layerDifference, 36);
     expect(d.colorPrecision, 8);
   });
 

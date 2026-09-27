@@ -4,16 +4,50 @@ import 'package:vtracer_ai/vtracer_ai.dart';
 
 import 'needle3_test.dart' show FakeRuntime, features;
 
-void main() {
-  test('candidates() exposes the three class profiles', () {
-    final engine = HeuristicDecisionEngine();
-    final candidates = engine.candidates(features, TuningGoal.balanced);
+/// A grayscale, strongly bimodal feature set (document/scan-like).
+const scanFeatures = ImageFeatures(
+  width: 800, height: 600, megapixels: 0.48, aspectRatio: 1.33,
+  quantizedColors: 4, paletteShare8: 0.99, dominantShare: 0.6,
+  edgeDensity: 0.15, meanGradient: 20, flatShare: 0.8, noiseLevel: 0.2,
+  colorfulness: 2, transparentShare: 0, luminanceSpread: 255,
+  darkShare: 0.45, lightShare: 0.5, backgroundUniformity: 1.5,
+);
 
-    expect(candidates.map((c) => c.$1), ['A', 'B', 'C']);
-    expect(candidates[0].$2.clustering, Clustering.binary); // line art
-    expect(candidates[1].$2.clustering, Clustering.colorCluster); // flat art
-    expect(candidates[2].$2.clustering, Clustering.colorCluster); // photo
-    expect(candidates[2].$2.filterSpeckle, 8); // photo speckle
+void main() {
+  test('candidates() offers only color families — never binary', () {
+    final menu = HeuristicDecisionEngine().candidates(features, TuningGoal.balanced);
+
+    // Photo-like features: flat and photo are the feasible families.
+    expect(menu.map((c) => c.$1), ['A', 'B']);
+    expect(
+      menu.every((c) => c.$2.clustering != Clustering.binary),
+      isTrue,
+      reason: 'the destructive binary profile must never reach the auto menu',
+    );
+  });
+
+  test('candidates() menu is never empty (flat and photo are unconditional)',
+      () {
+    for (final goal in TuningGoal.values) {
+      expect(
+        HeuristicDecisionEngine().candidates(features, goal),
+        isNotEmpty,
+      );
+    }
+  });
+
+  test('scanDirect detects document/scan inputs deterministically', () {
+    final direct =
+        HeuristicDecisionEngine().scanDirect(scanFeatures, TuningGoal.balanced);
+
+    expect(direct, isNotNull);
+    expect(direct!.clustering, Clustering.binary);
+    expect(direct.rationale, contains('document/scan'));
+    // Colorful images never take the scan route.
+    expect(
+      HeuristicDecisionEngine().scanDirect(features, TuningGoal.balanced),
+      isNull,
+    );
   });
 
   test('dispatched choice selects the candidate with model metadata',
@@ -22,7 +56,7 @@ void main() {
       'function_calls': [
         {
           'name': 'choose_candidate',
-          'arguments': {'choice': 'B'},
+          'arguments': {'choice': 'A'},
         },
       ],
       'reasoning': 'flat palette dominates the image',
@@ -30,22 +64,28 @@ void main() {
     });
     final engine = Needle3CandidateEngine(
       runtime: runtime,
-      rotateCandidates: false, // letter→class mapping is the shipped order
+      rotateCandidates: false, // letter→family mapping is the shipped order
     );
     final d = await engine.decide(features, TuningGoal.balanced);
 
     expect(d.source, DecisionSource.needle3);
     expect(d.confidence, closeTo(0.77, 1e-9));
-    expect(d.rationale, startsWith('model choice: B'));
-    // B = flat art profile for these photo-like features: color cluster with
-    // the moderate gradient step.
+    expect(d.rationale, startsWith('model choice: A'));
+    // A = flat family for these features.
     expect(d.clustering, Clustering.colorCluster);
-    expect(d.layerDifference, 20);
+    expect(d.layerDifference, 24);
     // The engine sees the chooser invocation, not the big decision schema.
     expect(runtime.lastInvocation!.tool['name'], 'choose_candidate');
+    // The tool enum covers exactly the presented letters.
+    final schema = runtime.lastInvocation!.tool['parameters']
+        as Map<String, Object?>;
+    final choice = (schema['properties']
+        as Map<String, Object?>)['choice'] as Map<String, Object?>;
+    expect(choice['enum'], ['A', 'B']);
   });
 
-  test('candidate rotation is deterministic for the same image', () async {
+  test('scan features take the deterministic route without the model',
+      () async {
     final runtime = FakeRuntime({
       'function_calls': [
         {
@@ -55,13 +95,12 @@ void main() {
       ],
     });
     final engine = Needle3CandidateEngine(runtime: runtime);
-    await engine.decide(features, TuningGoal.balanced);
-    final prompt1 = runtime.lastInvocation!.prompt;
-    await engine.decide(features, TuningGoal.balanced);
-    final prompt2 = runtime.lastInvocation!.prompt;
-    expect(prompt1, prompt2);
-    // Rotation reorders the letters relative to the shipped order.
-    expect(prompt1, isNot(contains('A = {"clustering":"binary"')));
+    final d = await engine.decide(scanFeatures, TuningGoal.balanced);
+
+    expect(d.clustering, Clustering.binary);
+    expect(d.source, DecisionSource.heuristic);
+    expect(runtime.lastInvocation, isNull,
+        reason: 'the model must not be consulted for scans');
   });
 
   test('invalid letter throws so callers can fall back', () async {
@@ -89,5 +128,22 @@ void main() {
       engine.decide(features, TuningGoal.balanced),
       throwsA(isA<Needle3Exception>()),
     );
+  });
+
+  test('candidate rotation is deterministic for the same image', () async {
+    final runtime = FakeRuntime({
+      'function_calls': [
+        {
+          'name': 'choose_candidate',
+          'arguments': {'choice': 'A'},
+        },
+      ],
+    });
+    final engine = Needle3CandidateEngine(runtime: runtime);
+    await engine.decide(features, TuningGoal.balanced);
+    final prompt1 = runtime.lastInvocation!.prompt;
+    await engine.decide(features, TuningGoal.balanced);
+    final prompt2 = runtime.lastInvocation!.prompt;
+    expect(prompt1, prompt2);
   });
 }

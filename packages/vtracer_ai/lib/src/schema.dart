@@ -281,8 +281,9 @@ Set max_colors or simplify to null unless the goal needs them. Then stop.
   /// Tool for the chooser profile: the model's whole job is to pick the
   /// letter of the candidate that best matches the features. Tiny output,
   /// and the chosen letter appears in the context, so the engine's grounding
-  /// validation accepts it.
-  static Map<String, Object?> chooserToolDefinition() => {
+  /// validation accepts it. The enum is the letters actually presented
+  /// (the feasible menu may be shorter than the full A–E range).
+  static Map<String, Object?> chooserToolDefinition(Iterable<String> letters) => {
         'name': 'choose_candidate',
         'parameters': {
           'type': 'object',
@@ -291,16 +292,16 @@ Set max_colors or simplify to null unless the goal needs them. Then stop.
           'properties': {
             'choice': {
               'type': 'string',
-              'enum': ['A', 'B', 'C'],
+              'enum': letters.toList(),
             },
           },
         },
       };
 
   static String chooserSystemPrompt() => '''
-You configure an image-to-vector converter. Three candidate parameter sets
-(A, B, C) are given. Call choose_candidate exactly once with the letter of
-the candidate that best matches the image features.
+You configure an image-to-vector converter. Candidate parameter sets are
+given, each labeled with a letter. Call choose_candidate exactly once with
+the letter of the candidate that best matches the image features.
 ''';
 
   /// Feature payload plus the candidate parameter sets, one line each.
@@ -329,7 +330,8 @@ the candidate that best matches the image features.
     return buffer.toString().trimRight();
   }
 
-  /// The chooser prompt set.
+  /// The chooser prompt set; the tool enum covers exactly the presented
+  /// letters.
   static ({String system, String prompt, Map<String, Object?> tool})
       chooserPrompts(
     ImageFeatures f,
@@ -339,6 +341,6 @@ the candidate that best matches the image features.
       (
         system: chooserSystemPrompt(),
         prompt: chooserFeaturePrompt(f, goal, candidates),
-        tool: chooserToolDefinition(),
+        tool: chooserToolDefinition(candidates.map((c) => c.$1)),
       );
 }

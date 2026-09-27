@@ -39,4 +39,19 @@ void main() {
         await AutoTuner.local().tune(posterImage(48, 48), goal: TuningGoal.faithful);
     expect(result.decision.simplify, isNull);
   });
+
+  test('preserveBinary keeps the manual B/W family', () async {
+    final image = posterImage(48, 48);
+    final base = VtracerConfig(clustering: Clustering.binary);
+
+    final preserved = await AutoTuner.local()
+        .tune(image, goal: TuningGoal.compact, base: base, preserveBinary: true);
+    expect(preserved.decision.clustering, Clustering.binary);
+    expect(preserved.decision.rationale, contains('binary kept'));
+
+    // Without preservation the auto menu switches to a color family.
+    final switched = await AutoTuner.local()
+        .tune(image, goal: TuningGoal.compact, base: base);
+    expect(switched.decision.clustering, isNot(Clustering.binary));
+  });
 }

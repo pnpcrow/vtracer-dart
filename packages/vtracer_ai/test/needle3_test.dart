@@ -134,9 +134,10 @@ void main() {
 
     expect(d.clustering, Clustering.watershed);
     expect(d.watershedDetail, 180);
-    // Baseline (photo profile) kept for everything the model omitted.
+    // Baseline (photo profile, feature-interpolated) kept for everything
+    // the model omitted.
     expect(d.colorPrecision, 8);
-    expect(d.layerDifference, 48);
+    expect(d.layerDifference, 36);
     expect(d.source, DecisionSource.needle3Repaired);
   });
 
@@ -169,7 +170,7 @@ void main() {
     );
     final d = await engine.decideOrHeuristic(features, TuningGoal.balanced);
     expect(d.source, DecisionSource.heuristic);
-    expect(d.filterSpeckle, 8);
+    expect(d.filterSpeckle, 4);
   });
 
   test('runtime failure propagates from decide()', () async {
